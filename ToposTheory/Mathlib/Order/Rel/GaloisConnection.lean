@@ -115,14 +115,32 @@ variable {C : Type*} [Category C] (XS : (X : C) × Sieve X) (P : Cᵒᵖ ⥤ Typ
 open Limits NatTrans Rel
 
 noncomputable def restrictionMap {X' : C} (f : X' ⟶ XS.1) :
-    (yoneda.obj X' ⟶ P) → ((pullback XS.2.functorInclusion (yoneda.map f)) ⟶ P) :=
-    fun α => (pullback.snd XS.2.functorInclusion (yoneda.map f)) ≫ α
+    (yoneda.obj X' ⟶ P) → (pullback XS.2.functorInclusion (yoneda.map f) ⟶ P) :=
+  (pullback.snd XS.2.functorInclusion (yoneda.map f) ≫ .)
 
-def bij_of_restrictMap : Prop :=
+def bij_of_restrictMap: Prop :=
   ∀ {X' : C} (f : X' ⟶ XS.1), Function.Bijective (restrictionMap XS P f)
 
-theorem mem_leftFixedPoint (J : GrothendieckTopology C) :
-  {XS : (X : C) × Sieve X | XS.2 ∈ J.sieves XS.1} ∈ (leftFixedPoints bij_of_restrictMap) := by admit
+def bij_of_restrictMap_implies_sheaf:
+    bij_of_restrictMap XS P → Presieve.YonedaSheafCondition P XS.2 := by
+  unfold Presieve.YonedaSheafCondition
+  intros h α
+  apply Function.Bijective.existsUnique
+  unfold bij_of_restrictMap at h
+  rw [← Category.comp_id XS.snd.functorInclusion, ← yoneda.map_id]
+  have bij: Function.Bijective (restrictionMap XS P (𝟙 _)) := h (𝟙 _)
+  unfold restrictionMap at bij
+  sorry
+
+theorem mem_leftFixedPoint (J : GrothendieckTopology C):
+    {XS : (X : C) × Sieve X | XS.2 ∈ J.sieves XS.1} ∈ (leftFixedPoints bij_of_restrictMap) := by
+  ext XS
+  simp [leftFixedPoints, leftDual, rightDual]
+  apply Iff.intro
+  . intro h
+    admit
+  . intros h₁ _ h₂
+    exact h₂ h₁
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints bij_of_restrictMap) : GrothendieckTopology C where
