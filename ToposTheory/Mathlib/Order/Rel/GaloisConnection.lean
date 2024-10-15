@@ -108,9 +108,14 @@ namespace Subtopos
 
 /-! ### The induced duality of topologies and subtoposes -/
 
+--NOTE(@doctorn) I feel like this must exist in MathLib, but I couldn't find it
+def presheaf_iso_globalSections.{u} {C : Type*} [Category C]
+    (P : C ᵒᵖ ⥤ Type u): P ⋙ coyoneda.obj (Opposite.op PUnit.{u + 1}) ≅ P :=
+  NatIso.ofComponents fun _ ↦ equivEquivIso <| Equiv.mk (fun e ↦ e PUnit.unit) (fun a ↦ fun _ ↦ a) (by tauto) (by tauto)
+
 universe u
 
-variable {C : Type*} [Category C] (XS : (X : C) × Sieve X) (P : Cᵒᵖ ⥤ Type u)
+variable {C : Type*} [Category C] (XS : (X : C) × Sieve X) (P Q : Cᵒᵖ ⥤ Type u)
 
 open Limits NatTrans Rel
 
@@ -118,29 +123,52 @@ noncomputable def restrictionMap {X' : C} (f : X' ⟶ XS.1) :
     (yoneda.obj X' ⟶ P) → (pullback XS.2.functorInclusion (yoneda.map f) ⟶ P) :=
   (pullback.snd XS.2.functorInclusion (yoneda.map f) ≫ .)
 
-def bij_of_restrictMap: Prop :=
+def bij_of_restrictMap : Prop :=
   ∀ {X' : C} (f : X' ⟶ XS.1), Function.Bijective (restrictionMap XS P f)
 
-def bij_of_restrictMap_implies_sheaf:
-    bij_of_restrictMap XS P → Presieve.YonedaSheafCondition P XS.2 := by
-  unfold Presieve.YonedaSheafCondition
-  intros h α
-  apply Function.Bijective.existsUnique
-  unfold bij_of_restrictMap at h
-  rw [← Category.comp_id XS.snd.functorInclusion, ← yoneda.map_id]
-  have bij: Function.Bijective (restrictionMap XS P (𝟙 _)) := h (𝟙 _)
-  unfold restrictionMap at bij
-  sorry
+def bij_of_restrictMap_coe (α : P ≅ Q) : bij_of_restrictMap XS P → bij_of_restrictMap XS Q := by
+  admit
 
-theorem mem_leftFixedPoint (J : GrothendieckTopology C):
+def bij_of_restrictMap_iff_yonedaSheafCondition : bij_of_restrictMap XS P ↔ Presieve.YonedaSheafCondition P XS.2 := by
+  apply Iff.intro
+  . intro h
+    unfold Presieve.YonedaSheafCondition
+    intro α
+    apply Function.Bijective.existsUnique
+    unfold bij_of_restrictMap at h
+    rw [← Category.comp_id XS.snd.functorInclusion, ← yoneda.map_id]
+    have bij: Function.Bijective (restrictionMap XS P (𝟙 _)) := h (𝟙 _)
+    unfold restrictionMap at bij
+    sorry
+  . sorry
+
+def sheaf_implies_bij_of_restrictMap (J : GrothendieckTopology C)
+    (hP : Presheaf.IsSheaf J P) (hXS : XS.2 ∈ J XS.1) : bij_of_restrictMap XS P := by
+  apply bij_of_restrictMap_coe _ _ _ (presheaf_iso_globalSections P)
+  apply (bij_of_restrictMap_iff_yonedaSheafCondition XS _).mpr
+  apply Presieve.isSheafFor_iff_yonedaSheafCondition.mp
+  unfold Presheaf.IsSheaf Presieve.IsSheaf at hP
+  exact (hP PUnit XS.2 hXS)
+
+def allSheavesRespect_implies_covering (J : GrothendieckTopology C) :
+    (∀ {P : C ᵒᵖ ⥤ Type u}, (hP : Presheaf.IsSheaf J P) → Presieve.YonedaSheafCondition P XS.2) → XS.2 ∈ J XS.1 := by
+  admit
+
+theorem mem_leftFixedPoint (J : GrothendieckTopology C) :
     {XS : (X : C) × Sieve X | XS.2 ∈ J.sieves XS.1} ∈ (leftFixedPoints bij_of_restrictMap) := by
   ext XS
   simp [leftFixedPoints, leftDual, rightDual]
   apply Iff.intro
   . intro h
-    admit
-  . intros h₁ _ h₂
-    exact h₂ h₁
+    apply allSheavesRespect_implies_covering
+    intros P hP
+    apply (bij_of_restrictMap_iff_yonedaSheafCondition XS P).mp
+    apply h
+    intro XS
+    apply sheaf_implies_bij_of_restrictMap
+    exact hP
+  . intros hXS _ hP
+    exact hP hXS
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints bij_of_restrictMap) : GrothendieckTopology C where

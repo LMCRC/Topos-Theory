@@ -56,8 +56,8 @@ variable {C : Type w} [SmallCategory C] (J : GrothendieckTopology C)
 
 -- open InducedPresentation
 
-class Topos (E : Type*) [Category E] : Prop where
-  presentation : ∃ (C : Type w) (_ : SmallCategory C) (J : GrothendieckTopology C) (F : E ⥤ Sheaf J (Type w)),
+class Topos (ℰ : Type*) [Category ℰ] : Prop where
+  presentation : ∃ (C : Type w) (_ : SmallCategory C) (J : GrothendieckTopology C) (F : ℰ ⥤ Sheaf J (Type w)),
     F.IsEquivalence
 
 -- associated sheaf functor at the Yoneda embedding
