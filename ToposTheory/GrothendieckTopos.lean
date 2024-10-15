@@ -72,5 +72,6 @@ instance : Topos.{w} (Sheaf J (Type w)) where
     have : HasWeakSheafify J (Type w) := by
       exact instHasWeakSheafifyOfHasSheafify J (Type w)
     use yoneda ⋙ presheafToSheaf J (Type w)
+    sorry
 
 end GrothendieckTopos
