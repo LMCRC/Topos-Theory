@@ -7,6 +7,7 @@ import Mathlib.Data.Rel
 import Mathlib.Order.GaloisConnection
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
 import ToposTheory.GrothendieckSubtopos
+import ToposTheory.Saturation
 
 /-!
 # The Galois Connection Induced by a Relation
@@ -110,7 +111,7 @@ namespace Subtopos
 
 universe u
 
-variable {C : Type u} [SmallCategory C] (XS : (X : C) × Sieve X) (P Q : Cᵒᵖ ⥤ Type u)
+variable {C : Type u} [SmallCategory C] (XS : (X : C) × Sieve X) (P : Cᵒᵖ ⥤ Type u)
 
 open Limits NatTrans Rel
 
@@ -121,22 +122,24 @@ noncomputable def restrictionMap {X' : C} (f : X' ⟶ XS.1) :
 def bij_of_restrictMap : Prop :=
   ∀ {X' : C} (f : X' ⟶ XS.1), Function.Bijective (restrictionMap XS P f)
 
+theorem bij_of_restrictMap_iff_isSheafFor :
+  Presieve.IsSheafFor P XS.2.arrows ↔ bij_of_restrictMap XS P := sorry
+
 theorem mem_leftFixedPoint (J : GrothendieckTopology C) :
     {XS : (X : C) × Sieve X | XS.2 ∈ J.sieves XS.1} ∈ (leftFixedPoints bij_of_restrictMap) := by
-  admit
-  -- ext XS
-  -- simp [leftFixedPoints, leftDual, rightDual]
-  -- apply Iff.intro
-  -- . intro h
-  --   apply allSheavesRespect_implies_covering
-  --   intros P hP
-  --   apply (bij_of_restrictMap_iff_yonedaSheafCondition XS P).mp
-  --   apply h
-  --   intro XS
-  --   apply sheaf_implies_bij_of_restrictMap
-  --   exact hP
-  -- . intros hXS _ hP
-  --   exact hP hXS
+  ext XS
+  simp [leftFixedPoints, leftDual, rightDual]
+  apply Iff.intro
+  . intro h
+    apply (Presieve.allSheavesRespect_iff_covering C J XS.2).mp
+    intros P hP
+    apply (bij_of_restrictMap_iff_isSheafFor XS P).mpr
+    apply h
+    intros YS hYS
+    apply (bij_of_restrictMap_iff_isSheafFor YS P).mp
+    unfold Presieve.IsSheaf at hP
+    exact hP YS.2 hYS
+  . tauto
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints bij_of_restrictMap) : GrothendieckTopology C where
