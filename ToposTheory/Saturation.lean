@@ -3,6 +3,7 @@ import Mathlib.CategoryTheory.Sites.Sieves
 import Mathlib.CategoryTheory.Sites.Sheaf
 import Mathlib.CategoryTheory.Sites.Sheafification
 import Mathlib.CategoryTheory.Sites.Equivalence
+-- import ToposTheory.Reflective
 
 universe u
 
@@ -34,7 +35,7 @@ theorem imageSieve_identityElement_le (J : GrothendieckTopology C) (X : C) (S : 
   simp
   intros Y f hf
 
-  use (toSheafify J S.functor).app (op Y) (by unfold Sieve.functor; simp; exact ⟨f, hf⟩)
+  use (toSheafify J S.functor).app (op Y) (by simp [Sieve.functor]; exact ⟨f, hf⟩)
 
   -- NOTE(@doctorn) this calc block should not have to be this complicated (look how simple the steps are!).
   -- For whatever reason, I couldn't get Lean4 to accept that the previous lemma would apply without this
@@ -108,16 +109,13 @@ theorem allSheavesRespect_iff_isIso_sheafifyMap (J : GrothendieckTopology C) {X 
   apply Iff.intro
   . sorry
   . intro h
-    apply (isIso_sheafifyMap_functorInclusion_iff_covering C J S).mp at h
+    rw [isIso_sheafifyMap_functorInclusion_iff_covering C J S] at h
     tauto
 
 theorem allSheavesRespect_iff_covering (J : GrothendieckTopology C) {X : C} (S : Sieve X) :
     (∀ {P : C ᵒᵖ ⥤ Type u}, Presieve.IsSheaf J P → Presieve.IsSheafFor P S.arrows) ↔ S ∈ J X := by
-  apply Iff.intro
-  . intro h
-    apply (isIso_sheafifyMap_functorInclusion_iff_covering C J S).mp
-    exact (allSheavesRespect_iff_isIso_sheafifyMap C J S).mp h
-  . tauto
+  rw [← isIso_sheafifyMap_functorInclusion_iff_covering C J S]
+  rw [allSheavesRespect_iff_isIso_sheafifyMap C J S]
 
 end Presieve
 
