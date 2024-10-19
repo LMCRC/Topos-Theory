@@ -1,5 +1,5 @@
-import MathLib.CategoryTheory.Adjunction.Reflective
-import MathLib.CategoryTheory.Yoneda
+import Mathlib.CategoryTheory.Adjunction.Reflective
+import Mathlib.CategoryTheory.Yoneda
 
 universe v₁ v₂ u₁ u₂
 
@@ -16,15 +16,15 @@ def adjunctOfReflection {X Y : D} (f : X ⟶ Y) : i ⋙ (coyoneda.obj (op Y)) �
   app := by
     intro Z
     simp [coyoneda]
-    have rf := (coyoneda.map ((reflector i).map f).op).app Z
-    exact ((reflectorAdjunction i).homEquiv X Z).toFun ∘ rf ∘ ((reflectorAdjunction i).homEquiv Y Z).invFun
+    let α := (reflectorAdjunction i).homEquiv
+    exact (α X Z).toFun ∘ (coyoneda.map ((reflector i).map f).op).app Z ∘ (α Y Z).invFun
 
-theorem isIso_reflector_iff_isIso_yoneda_reflector {X Y : D} (f : X ⟶ Y) :
+theorem isIso_reflector_iff_isIso_coyoneda_reflector {X Y : D} (f : X ⟶ Y) :
     IsIso ((reflector i).map f) ↔ IsIso (coyoneda.map ((reflector i).map f).op) := by
   apply Iff.intro
-  . intros h
+  . intro
     apply Functor.map_isIso
-  . intro h
+  . intro
     have: IsIso ((reflector i).map f).op := by apply Coyoneda.isIso
     apply isIso_of_op
 
@@ -35,7 +35,7 @@ theorem yonedaMap_eq_adjunctOfReflection (i : C ⥤ D) [Reflective i] {X Y : D} 
 
 theorem isIso_iff_isIso_adjunctOfReflection {X Y : D} (f : X ⟶ Y) :
     IsIso ((reflector i).map f) ↔ IsIso (adjunctOfReflection i f) := by
-  simp [isIso_reflector_iff_isIso_yoneda_reflector, NatTrans.isIso_iff_isIso_app, adjunctOfReflection, isIso_iff_bijective]
+  simp [isIso_reflector_iff_isIso_coyoneda_reflector, NatTrans.isIso_iff_isIso_app, adjunctOfReflection, isIso_iff_bijective]
 
 theorem isIso_reflection_iff_locally_iso {X Y : D} (f : X ⟶ Y) :
     IsIso ((reflector i).map f) ↔ IsIso (whiskerLeft i (coyoneda.map f.op)) := by

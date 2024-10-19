@@ -123,22 +123,23 @@ def bij_of_restrictMap : Prop :=
   ∀ {X' : C} (f : X' ⟶ XS.1), Function.Bijective (restrictionMap XS P f)
 
 theorem bij_of_restrictMap_iff_isSheafFor :
-  Presieve.IsSheafFor P XS.2.arrows ↔ bij_of_restrictMap XS P := sorry
+    Presieve.IsSheafFor P XS.2.arrows ↔ bij_of_restrictMap XS P := by
+  rw [Presieve.isSheafFor_iff_yonedaSheafCondition]
+  sorry
 
 theorem mem_leftFixedPoint (J : GrothendieckTopology C) :
     {XS : (X : C) × Sieve X | XS.2 ∈ J.sieves XS.1} ∈ (leftFixedPoints bij_of_restrictMap) := by
   ext XS
   simp [leftFixedPoints, leftDual, rightDual]
   apply Iff.intro
-  . intro h
-    apply (Presieve.allSheavesRespect_iff_covering C J XS.2).mp
-    intros P hP
-    apply (bij_of_restrictMap_iff_isSheafFor XS P).mpr
+  . rw [← Presheaf.allSheavesRespect_iff_covering]
+    intros h P
+    rw [bij_of_restrictMap_iff_isSheafFor]
+    intro hP
     apply h
     intros YS hYS
-    apply (bij_of_restrictMap_iff_isSheafFor YS P).mp
-    unfold Presieve.IsSheaf at hP
-    exact hP YS.2 hYS
+    rw [← bij_of_restrictMap_iff_isSheafFor]
+    exact hP.isSheafFor YS.2 hYS
   . tauto
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
