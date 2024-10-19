@@ -115,17 +115,24 @@ variable {C : Type u} [SmallCategory C] (XS : (X : C) × Sieve X) (P : Cᵒᵖ �
 
 open Limits NatTrans Rel
 
-noncomputable def restrictionMap {X' : C} (f : X' ⟶ XS.1) :
-    (yoneda.obj X' ⟶ P) → (pullback XS.2.functorInclusion (yoneda.map f) ⟶ P) :=
-  (pullback.snd XS.2.functorInclusion (yoneda.map f) ≫ .)
+def restrictionMap {X' : C} (f : X' ⟶ XS.1) :
+    (yoneda.obj X' ⟶ P) → ((Sieve.pullback f XS.2).functor ⟶ P) :=
+  ((Sieve.pullback f XS.2).functorInclusion ≫ .)
 
 def bij_of_restrictMap : Prop :=
   ∀ {X' : C} (f : X' ⟶ XS.1), Function.Bijective (restrictionMap XS P f)
 
 theorem bij_of_restrictMap_iff_isSheafFor :
-    Presieve.IsSheafFor P XS.2.arrows ↔ bij_of_restrictMap XS P := by
-  rw [Presieve.isSheafFor_iff_yonedaSheafCondition]
-  sorry
+    (∀ {X' : C} (f : X' ⟶ XS.fst), Presieve.IsSheafFor P (Sieve.pullback f XS.2).arrows) ↔ bij_of_restrictMap XS P := by
+  conv =>
+    lhs
+    ext X' f
+    rw [Presieve.isSheafFor_iff_yonedaSheafCondition]
+    unfold Presieve.YonedaSheafCondition
+  conv =>
+    rhs
+    unfold bij_of_restrictMap
+    simp [restrictionMap, Function.bijective_iff_existsUnique]
 
 theorem mem_leftFixedPoint (J : GrothendieckTopology C) :
     {XS : (X : C) × Sieve X | XS.2 ∈ J.sieves XS.1} ∈ (leftFixedPoints bij_of_restrictMap) := by
@@ -133,13 +140,17 @@ theorem mem_leftFixedPoint (J : GrothendieckTopology C) :
   simp [leftFixedPoints, leftDual, rightDual]
   apply Iff.intro
   . rw [← Presheaf.allSheavesRespect_iff_covering]
-    intros h P
-    rw [bij_of_restrictMap_iff_isSheafFor]
-    intro hP
-    apply h
-    intros YS hYS
-    rw [← bij_of_restrictMap_iff_isSheafFor]
-    exact hP.isSheafFor YS.2 hYS
+    intros h P hP
+    have: (∀ {X' : C} (f : X' ⟶ XS.fst), Presieve.IsSheafFor P (Sieve.pullback f XS.2).arrows) := by
+      rw [bij_of_restrictMap_iff_isSheafFor]
+      apply h
+      intros YS hYS
+      rw [← bij_of_restrictMap_iff_isSheafFor]
+      intros _ f
+      exact hP.isSheafFor (Sieve.pullback f YS.2) (J.pullback_stable f hYS)
+    have := this (𝟙 _)
+    rw [Sieve.pullback_id] at this
+    exact this
   . tauto
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
