@@ -84,8 +84,8 @@ theorem rightDual_mem_leftFixedPoint (I : Set β) : R.rightDual I ∈ R.leftFixe
 def equivFixedPoints : R.leftFixedPoints ≃ R.rightFixedPoints where
   toFun := fun ⟨J, _⟩ => ⟨R.leftDual J, R.leftDual_mem_rightFixedPoint J⟩
   invFun := fun ⟨I, _⟩ => ⟨R.rightDual I, R.rightDual_mem_leftFixedPoint I⟩
-  left_inv J := by cases' J with J hJ; rw [Subtype.mk.injEq, hJ]
-  right_inv I := by cases' I with I hI; rw [Subtype.mk.injEq, hI]
+  left_inv J := by obtain ⟨_, hJ⟩ := J; rw [Subtype.mk.injEq, hJ]
+  right_inv I := by obtain ⟨_, hI⟩ := I; rw [Subtype.mk.injEq, hI]
 
 theorem rightDual_leftDual_le_of_le {J J' : Set α} (h : J' ∈ R.leftFixedPoints) (h₁ : J ≤ J') :
     R.rightDual (R.leftDual J) ≤ J' := by
@@ -111,19 +111,19 @@ namespace Subtopos
 
 universe u
 
-variable {C : Type u} [SmallCategory C] (XS : (X : C) × Sieve X) (P : Cᵒᵖ ⥤ Type u)
+variable {C : Type u} [SmallCategory C]
 
 open Limits NatTrans Rel
 
-def restrictionMap {X' : C} (f : X' ⟶ XS.1) :
-    (yoneda.obj X' ⟶ P) → ((Sieve.pullback f XS.2).functor ⟶ P) :=
-  ((Sieve.pullback f XS.2).functorInclusion ≫ .)
+def restrictionMap {X : C} (P : Cᵒᵖ ⥤ Type u)  (S : Sieve X) {X' : C} (f : X' ⟶ X) :
+    (yoneda.obj X' ⟶ P) → ((Sieve.pullback f S).functor ⟶ P) :=
+  ((Sieve.pullback f S).functorInclusion ≫ .)
 
-def bij_of_restrictMap : Prop :=
-  ∀ {X' : C} (f : X' ⟶ XS.1), Function.Bijective (restrictionMap XS P f)
+def bij_of_restrictionMap (XS : (X : C) × Sieve X) (P : Cᵒᵖ ⥤ Type u) : Prop :=
+  ∀ {X' : C} (f : X' ⟶ XS.1), Function.Bijective (restrictionMap P XS.2 f)
 
-theorem bij_of_restrictMap_iff_isSheafFor :
-    (∀ {X' : C} (f : X' ⟶ XS.fst), Presieve.IsSheafFor P (Sieve.pullback f XS.2).arrows) ↔ bij_of_restrictMap XS P := by
+theorem bij_of_restrictionMap_iff_isSheafFor {X : C} (S : Sieve X) :
+    (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (Sieve.pullback f S).arrows) ↔ bij_of_restrictionMap ⟨X, S⟩ P := by
   conv =>
     lhs
     ext X' f
@@ -131,32 +131,55 @@ theorem bij_of_restrictMap_iff_isSheafFor :
     unfold Presieve.YonedaSheafCondition
   conv =>
     rhs
-    unfold bij_of_restrictMap
+    unfold bij_of_restrictionMap
     simp [restrictionMap, Function.bijective_iff_existsUnique]
 
 theorem mem_leftFixedPoint (J : GrothendieckTopology C) :
-    {XS : (X : C) × Sieve X | XS.2 ∈ J.sieves XS.1} ∈ (leftFixedPoints bij_of_restrictMap) := by
-  ext XS
+    {⟨X, S⟩ : (X : C) × Sieve X | S ∈ J.sieves X} ∈ (leftFixedPoints bij_of_restrictionMap) := by
+  ext ⟨X, S⟩
   simp [leftFixedPoints, leftDual, rightDual]
   apply Iff.intro
-  . rw [← Presheaf.allSheavesRespect_iff_covering]
+  . rw [← Presheaf.sheaves_respect_iff_covering]
     intros h P hP
-    have: (∀ {X' : C} (f : X' ⟶ XS.fst), Presieve.IsSheafFor P (Sieve.pullback f XS.2).arrows) := by
-      rw [bij_of_restrictMap_iff_isSheafFor]
+    have: (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (Sieve.pullback f S).arrows) := by
+      rw [bij_of_restrictionMap_iff_isSheafFor]
       apply h
       intros YS hYS
-      rw [← bij_of_restrictMap_iff_isSheafFor]
+      obtain ⟨Y, S'⟩ := YS
+      rw [← bij_of_restrictionMap_iff_isSheafFor]
       intros _ f
-      exact hP.isSheafFor (Sieve.pullback f YS.2) (J.pullback_stable f hYS)
+      exact hP.isSheafFor (Sieve.pullback f S') (J.pullback_stable f hYS)
     have := this (𝟙 _)
     rw [Sieve.pullback_id] at this
     exact this
   . tauto
 
+def yoneda_iso_top_functor (X : C) : yoneda.obj X ≅ Sieve.functor (X := X) ⊤ :=
+  NatIso.ofComponents (fun X' ↦ by simp; exact Equiv.toIso {
+    toFun := fun f ↦ ⟨f, trivial⟩
+    invFun := fun g ↦ g.1
+    left_inv := by tauto
+    right_inv := by tauto
+  })
+
+lemma bij_of_restrictionMap_top (X : C) (P : Cᵒᵖ ⥤ Type u) : bij_of_restrictionMap ⟨X, ⊤⟩ P := by
+  unfold bij_of_restrictionMap restrictionMap
+  intros X' f
+  rw [Function.bijective_iff_has_inverse]
+  use (fun g ↦ by
+    simp at g
+    exact (yoneda_iso_top_functor X').hom ≫ g)
+  aesop_cat
+
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
-    (h : J ∈ leftFixedPoints bij_of_restrictMap) : GrothendieckTopology C where
+    (h : J ∈ leftFixedPoints bij_of_restrictionMap) : GrothendieckTopology C where
   sieves X := {S : Sieve X | ⟨X, S⟩ ∈ J}
-  top_mem' := sorry
+  top_mem' := by
+    intros X
+    unfold leftFixedPoints at h
+    rw [← h, rightDual, leftDual]
+    intro P _
+    exact bij_of_restrictionMap_top X P
   pullback_stable' := sorry
   transitive' := sorry
 
@@ -165,9 +188,9 @@ open GrothendieckTopos
 variable {I : Set (Cᵒᵖ ⥤ Type u)}
 
 theorem mem_rightFixedPoint (ℰ : Subtopos (Cᵒᵖ ⥤ Type u)) (h : ∀ P, ℰ.obj P ↔ P ∈ I) :
-    I ∈ rightFixedPoints bij_of_restrictMap := by admit
+    I ∈ rightFixedPoints bij_of_restrictionMap := by admit
 
-instance subtopos_of_rightFixedPoint (h : I ∈ rightFixedPoints bij_of_restrictMap) :
+instance subtopos_of_rightFixedPoint (h : I ∈ rightFixedPoints bij_of_restrictionMap) :
     Subtopos (Cᵒᵖ ⥤ Type u) where
   obj P := P ∈ I
   adj := sorry

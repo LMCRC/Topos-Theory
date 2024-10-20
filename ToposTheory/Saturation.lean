@@ -11,23 +11,23 @@ namespace CategoryTheory
 
 open Opposite CategoryTheory Category Limits
 
-variable {C : Type u} [SmallCategory C]
+variable {C : Type u} [SmallCategory C] (J : GrothendieckTopology C)
 
 namespace Presheaf
 
 private
-noncomputable def identityElement (J : GrothendieckTopology C) (X : C) : (sheafify J (yoneda.obj X)).obj (Opposite.op X) :=
+noncomputable def identityElement (X : C) : (sheafify J (yoneda.obj X)).obj (Opposite.op X) :=
   (toSheafify J (yoneda.obj X)).app (Opposite.op X) (𝟙 _)
 
 private
-theorem sheafify_identityElement_naturality (J : GrothendieckTopology C) {X Y : C} (f : Y ⟶ X) :
+lemma sheafify_identityElement_naturality {X Y : C} (f : Y ⟶ X) :
     (sheafify J (yoneda.obj X)).map f.op (identityElement J X) = (toSheafify J (yoneda.obj X)).app (op Y) f := by
  have := congrFun ((toSheafify J (yoneda.obj X)).naturality f.op) (𝟙 X)
  simp at this
  exact this.symm
 
 private
-theorem imageSieve_identityElement_le (J : GrothendieckTopology C) (X : C) (S : Sieve X) :
+lemma imageSieve_identityElement_le {X : C} (S : Sieve X) :
     S ≤ Presheaf.imageSieve (sheafifyMap J S.functorInclusion) (identityElement J X) := by
   simp [Presheaf.imageSieve]
   intros Y f hf
@@ -54,19 +54,29 @@ theorem imageSieve_identityElement_le (J : GrothendieckTopology C) (X : C) (S : 
       := (sheafify_identityElement_naturality J f).symm
 
 private
-theorem imageSieve_identityElement_ge (J : GrothendieckTopology C) (X : C) (S : Sieve X) :
-    Presheaf.imageSieve (sheafifyMap J S.functorInclusion) (identityElement J X) ≤ S := sorry
+lemma imageSieve_identityElement_ge {X : C} (S : Sieve X) :
+    Presheaf.imageSieve (sheafifyMap J S.functorInclusion) (identityElement J X) ≤ S := by
+  simp [Presheaf.imageSieve]
+  intros Y f hf
+  obtain ⟨t, ht⟩ := hf
+  simp [forget, ConcreteCategory.forget] at t
+  have ht: ((sheafifyMap J S.functorInclusion).app (op Y)) t = (toSheafify J (yoneda.obj X)).app (op Y) f := by
+    rw [← sheafify_identityElement_naturality]
+    exact ht
+  -- Looking at this goal, I'm less and less sure it's possible to fill. It's possible that I'm
+  -- trying to prove something that's false here...
+  sorry
 
 private
-theorem imageSieve_identityElement_eq (J : GrothendieckTopology C) (X : C) (S : Sieve X) :
+lemma imageSieve_identityElement_eq {X : C} (S : Sieve X) :
     S = Presheaf.imageSieve (sheafifyMap J S.functorInclusion) (identityElement J X) := by
   apply le_antisymm
-  . exact imageSieve_identityElement_le J X S
-  . exact imageSieve_identityElement_ge J X S
+  . exact imageSieve_identityElement_le J S
+  . exact imageSieve_identityElement_ge J S
 
 -- NOTE(@doctorn) this should definitely be correctly generalised and added to MathLib.
 -- We also want an iff version of `CategoryTheory.Functor.FullyFaithful.isIso_of_isIso_map`.
-theorem isIso_iff_isIso_val (J : GrothendieckTopology C) {P Q : Sheaf J (Type u)} (α : P ⟶ Q) :
+theorem isIso_iff_isIso_val {P Q : Sheaf J (Type u)} (α : P ⟶ Q) :
     IsIso α ↔ IsIso α.val := by
   have: IsIso α.val ↔ IsIso ((sheafToPresheaf J (Type u)).map α) := by simp [sheafToPresheaf]
   rw [this]
@@ -76,13 +86,13 @@ theorem isIso_iff_isIso_val (J : GrothendieckTopology C) {P Q : Sheaf J (Type u)
   . intro
     exact (fullyFaithfulSheafToPresheaf J (Type u)).isIso_of_isIso_map α
 
-theorem isIso_sheafifyMap_iff_isIso_whiserking (J : GrothendieckTopology C) {X : C} (S : Sieve X) :
+theorem isIso_sheafifyMap_iff_isIso_whiserking {X : C} (S : Sieve X) :
     IsIso (sheafifyMap J S.functorInclusion)
       ↔ IsIso (whiskerLeft (sheafToPresheaf J (Type u)) (coyoneda.map S.functorInclusion.op)) := by
   have := isIso_reflection_iff_locally_iso (sheafToPresheaf J (Type u)) (S.functorInclusion)
   simp [← this, reflector, Reflective.L, sheafifyMap, isIso_iff_isIso_val]
 
-theorem isIso_whiserking_iff_yonedaSheafCondition (J : GrothendieckTopology C) {X : C} (S : Sieve X) :
+theorem isIso_whiserking_iff_yonedaSheafCondition {X : C} (S : Sieve X) :
     IsIso (whiskerLeft (sheafToPresheaf J (Type u)) (coyoneda.map S.functorInclusion.op))
       ↔ ∀ (P : Sheaf J (Type u)), Presieve.YonedaSheafCondition P.val S := by
   unfold Presieve.YonedaSheafCondition
@@ -93,7 +103,7 @@ theorem isIso_whiserking_iff_yonedaSheafCondition (J : GrothendieckTopology C) {
     rw [isIso_iff_bijective, Function.bijective_iff_existsUnique]
   simp
 
-theorem allSheavesRespect_iff_isIso_sheafifyMap (J : GrothendieckTopology C) {X : C} (S : Sieve X) :
+theorem sheaves_respect_iff_isIso_sheafifyMap {X : C} (S : Sieve X) :
     (∀ {P : C ᵒᵖ ⥤ Type u}, Presheaf.IsSheaf J P → Presieve.IsSheafFor P S.arrows)
       ↔ IsIso (sheafifyMap J S.functorInclusion) := by
   rw [isIso_sheafifyMap_iff_isIso_whiserking, isIso_whiserking_iff_yonedaSheafCondition]
@@ -108,7 +118,7 @@ theorem allSheavesRespect_iff_isIso_sheafifyMap (J : GrothendieckTopology C) {X 
     let F: Sheaf J (Type u) := { val := P, cond := hP }
     exact h F
 
-theorem isIso_sheafifyMap_functorInclusion_iff_covering (J : GrothendieckTopology C) {X : C} (S : Sieve X) :
+theorem isIso_sheafifyMap_functorInclusion_iff_covering {X : C} (S : Sieve X) :
     IsIso (sheafifyMap J S.functorInclusion) ↔ S ∈ J X := by
   apply Iff.intro
   . intro
@@ -122,9 +132,9 @@ theorem isIso_sheafifyMap_functorInclusion_iff_covering (J : GrothendieckTopolog
     rw [← Presieve.isSheafFor_iff_yonedaSheafCondition]
     exact P.cond.isSheafFor S h
 
-theorem allSheavesRespect_iff_covering (J : GrothendieckTopology C) {X : C} (S : Sieve X) :
+theorem sheaves_respect_iff_covering {X : C} (S : Sieve X) :
     (∀ {P : C ᵒᵖ ⥤ Type u}, Presheaf.IsSheaf J P → Presieve.IsSheafFor P S.arrows) ↔ S ∈ J X := by
-  rw [← isIso_sheafifyMap_functorInclusion_iff_covering, allSheavesRespect_iff_isIso_sheafifyMap]
+  rw [← isIso_sheafifyMap_functorInclusion_iff_covering, sheaves_respect_iff_isIso_sheafifyMap]
 
 end Presheaf
 
