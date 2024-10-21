@@ -171,6 +171,14 @@ lemma bij_of_restrictionMap_top (X : C) (P : Cᵒᵖ ⥤ Type u) : bij_of_restri
     exact (yoneda_iso_top_functor X').hom ≫ g)
   aesop_cat
 
+lemma bij_of_restrictionMap_pullback {X : C} (S : Sieve X) (P : C ᵒᵖ ⥤ Type u)
+    (h : bij_of_restrictionMap ⟨X, S⟩ P) {Y : C} (f : Y ⟶ X) : bij_of_restrictionMap ⟨Y, Sieve.pullback f S⟩ P := by
+  unfold bij_of_restrictionMap restrictionMap
+  intros Z g
+  simp
+  rw [← Sieve.pullback_comp]
+  exact h (g ≫ f)
+
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints bij_of_restrictionMap) : GrothendieckTopology C where
   sieves X := {S : Sieve X | ⟨X, S⟩ ∈ J}
@@ -178,9 +186,15 @@ instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     intros X
     unfold leftFixedPoints at h
     rw [← h, rightDual, leftDual]
-    intro P _
+    intros P _
     exact bij_of_restrictionMap_top X P
-  pullback_stable' := sorry
+  pullback_stable' := by
+    intros _ _ S f hS
+    unfold leftFixedPoints at h
+    rw [← h, rightDual, leftDual]
+    simp
+    intros P hP
+    exact bij_of_restrictionMap_pullback S P (hP hS) f
   transitive' := sorry
 
 open GrothendieckTopos
