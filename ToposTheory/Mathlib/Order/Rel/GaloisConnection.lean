@@ -180,22 +180,29 @@ lemma bij_of_restrictionMap_pullback {X : C} (S : Sieve X) (P : C ᵒᵖ ⥤ Typ
   exact h (g ≫ f)
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
-    (h : J ∈ leftFixedPoints bij_of_restrictionMap) : GrothendieckTopology C where
-  sieves X := {S : Sieve X | ⟨X, S⟩ ∈ J}
-  top_mem' := by
-    intros X
-    unfold leftFixedPoints at h
-    rw [← h, rightDual, leftDual]
-    intros P _
-    exact bij_of_restrictionMap_top X P
-  pullback_stable' := by
-    intros _ _ S f hS
-    unfold leftFixedPoints at h
-    rw [← h, rightDual, leftDual]
-    simp
-    intros P hP
-    exact bij_of_restrictionMap_pullback S P (hP hS) f
-  transitive' := sorry
+    (h : J ∈ leftFixedPoints bij_of_restrictionMap) : GrothendieckTopology C := by
+  simp [leftFixedPoints, rightDual, leftDual] at h
+  exact {
+    sieves := fun X ↦ {S : Sieve X | ⟨X, S⟩ ∈ J}
+    top_mem' := by
+      intros X
+      rw [← h]
+      intros P _
+      exact bij_of_restrictionMap_top X P
+    pullback_stable' := by
+      intros _ _ S f hS
+      rw [← h]
+      intros P hP
+      exact bij_of_restrictionMap_pullback S P (hP hS) f
+    transitive' := by
+      intros _ S hS R hR
+      rw [← h]
+      intros P hP
+
+      unfold bij_of_restrictionMap restrictionMap
+      intros Z f
+      sorry
+  }
 
 open GrothendieckTopos
 
@@ -211,10 +218,6 @@ instance subtopos_of_rightFixedPoint (h : I ∈ rightFixedPoints bij_of_restrict
   flat := sorry
   mem := sorry
 
-instance : GrothendieckTopology C ≃ Subtopos (Cᵒᵖ ⥤ Type u) where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+instance : GrothendieckTopology C ≃ Subtopos (Cᵒᵖ ⥤ Type u) := sorry
 
 end Subtopos
