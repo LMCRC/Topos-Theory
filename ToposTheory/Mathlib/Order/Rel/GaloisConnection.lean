@@ -179,30 +179,27 @@ lemma bij_of_restrictionMap_pullback {X : C} (S : Sieve X) (P : C ᵒᵖ ⥤ Typ
   rw [← Sieve.pullback_comp]
   exact h (g ≫ f)
 
+lemma bij_of_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u)
+    (hS : bij_of_restrictionMap ⟨X, S⟩ P)
+    (hR : ∀ {Y : C} {f : Y ⟶ X}, S.arrows f → bij_of_restrictionMap ⟨Y, Sieve.pullback f R⟩ P) :
+    bij_of_restrictionMap ⟨X, R⟩ P := sorry
+
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints bij_of_restrictionMap) : GrothendieckTopology C := by
   simp [leftFixedPoints, rightDual, leftDual] at h
-  exact {
-    sieves := fun X ↦ {S : Sieve X | ⟨X, S⟩ ∈ J}
-    top_mem' := by
-      intros X
-      rw [← h]
-      intros P _
-      exact bij_of_restrictionMap_top X P
-    pullback_stable' := by
-      intros _ _ S f hS
-      rw [← h]
-      intros P hP
-      exact bij_of_restrictionMap_pullback S P (hP hS) f
-    transitive' := by
-      intros _ S hS R hR
-      rw [← h]
-      intros P hP
-
-      unfold bij_of_restrictionMap restrictionMap
-      intros Z f
-      sorry
-  }
+  apply GrothendieckTopology.mk (fun X ↦ {S : Sieve X | ⟨X, S⟩ ∈ J})
+  . intros X
+    rw [← h]
+    intros P _
+    exact bij_of_restrictionMap_top X P
+  . intros _ _ S f hS
+    rw [← h]
+    intros P hP
+    exact bij_of_restrictionMap_pullback S P (hP hS) f
+  . intros _ S _ R _
+    rw [← h]
+    intros P _
+    exact bij_of_restrictionMap_transitive S R P (by tauto) (by tauto)
 
 open GrothendieckTopos
 
