@@ -116,14 +116,14 @@ variable {C : Type u} [SmallCategory C]
 open Limits NatTrans Rel
 
 def restrictionMap {X : C} (P : Cᵒᵖ ⥤ Type u)  (S : Sieve X) {X' : C} (f : X' ⟶ X) :
-    (yoneda.obj X' ⟶ P) → ((Sieve.pullback f S).functor ⟶ P) :=
-  ((Sieve.pullback f S).functorInclusion ≫ .)
+    (yoneda.obj X' ⟶ P) → ((S.pullback f).functor ⟶ P) :=
+  ((S.pullback f).functorInclusion ≫ .)
 
 def bij_of_restrictionMap (XS : (X : C) × Sieve X) (P : Cᵒᵖ ⥤ Type u) : Prop :=
   ∀ {X' : C} (f : X' ⟶ XS.1), Function.Bijective (restrictionMap P XS.2 f)
 
 theorem bij_of_restrictionMap_iff_isSheafFor {X : C} (S : Sieve X) :
-    (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (Sieve.pullback f S).arrows) ↔ bij_of_restrictionMap ⟨X, S⟩ P := by
+    (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (S.pullback f).arrows) ↔ bij_of_restrictionMap ⟨X, S⟩ P := by
   conv =>
     lhs
     ext X' f
@@ -141,14 +141,14 @@ theorem mem_leftFixedPoint (J : GrothendieckTopology C) :
   apply Iff.intro
   . rw [← Presheaf.sheaves_respect_iff_covering]
     intros h P hP
-    have: (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (Sieve.pullback f S).arrows) := by
+    have: (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (S.pullback f).arrows) := by
       rw [bij_of_restrictionMap_iff_isSheafFor]
       apply h
       intros YS hYS
       obtain ⟨Y, S'⟩ := YS
       rw [← bij_of_restrictionMap_iff_isSheafFor]
       intros _ f
-      exact hP.isSheafFor (Sieve.pullback f S') (J.pullback_stable f hYS)
+      exact hP.isSheafFor (S'.pullback f) (J.pullback_stable f hYS)
     have := this (𝟙 _)
     rw [Sieve.pullback_id] at this
     exact this
@@ -172,17 +172,59 @@ lemma bij_of_restrictionMap_top (X : C) (P : Cᵒᵖ ⥤ Type u) : bij_of_restri
   aesop_cat
 
 lemma bij_of_restrictionMap_pullback {X : C} (S : Sieve X) (P : C ᵒᵖ ⥤ Type u)
-    (h : bij_of_restrictionMap ⟨X, S⟩ P) {Y : C} (f : Y ⟶ X) : bij_of_restrictionMap ⟨Y, Sieve.pullback f S⟩ P := by
+    (h : bij_of_restrictionMap ⟨X, S⟩ P) {Y : C} (f : Y ⟶ X) : bij_of_restrictionMap ⟨Y, S.pullback f⟩ P := by
   unfold bij_of_restrictionMap restrictionMap
   intros Z g
-  simp
   rw [← Sieve.pullback_comp]
   exact h (g ≫ f)
 
+--TODO(@doctorn) move this out
+namespace Sieve
+
+  def functorInclusion_of_pullback {X : C} (S : Sieve X) {Y : C} (f : Y ⟶ X) : (S.pullback f).functor ⟶ S.functor := by
+    simp [Sieve.functor, Sieve.pullback]
+    exact { app := fun Z ↦ fun ⟨g, hg⟩ ↦ ⟨g ≫ f, hg⟩ }
+
+end Sieve
+
 lemma bij_of_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u)
     (hS : bij_of_restrictionMap ⟨X, S⟩ P)
-    (hR : ∀ {Y : C} {f : Y ⟶ X}, S.arrows f → bij_of_restrictionMap ⟨Y, Sieve.pullback f R⟩ P) :
-    bij_of_restrictionMap ⟨X, R⟩ P := sorry
+    (hR : ∀ {Y : C} {f : Y ⟶ X}, S.arrows f → bij_of_restrictionMap ⟨Y, R.pullback f⟩ P) :
+    bij_of_restrictionMap ⟨X, R⟩ P := by
+  unfold bij_of_restrictionMap restrictionMap
+  intros X' f
+
+  rw [Function.bijective_iff_existsUnique]
+  intro p
+
+  have p': (S.pullback f).functor ⟶ P := {
+    app := by
+      intros Z g
+      simp [Sieve.functor] at g
+      obtain ⟨g, hg⟩ := g
+
+      let i: (R.pullback (g ≫ f)).functor ⟶ (R.pullback f).functor := by
+        rw [Sieve.pullback_comp]
+        exact Sieve.functorInclusion_of_pullback (R.pullback f) g
+
+      have := hR hg (𝟙 _)
+      unfold restrictionMap at this
+      rw [Sieve.pullback_id] at this
+      simp [Function.bijective_iff_existsUnique] at this
+
+      exact (Classical.choose (this (i ≫ p))).app Z (𝟙 _)
+    naturality := sorry
+  }
+
+  unfold bij_of_restrictionMap at hS
+  have := hS f
+  rw [Function.bijective_iff_existsUnique] at this
+  have lifting := this p'
+  use Classical.choose lifting
+
+  apply And.intro
+  . sorry
+  . sorry
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints bij_of_restrictionMap) : GrothendieckTopology C := by
