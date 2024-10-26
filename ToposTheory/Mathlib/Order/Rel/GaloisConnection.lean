@@ -119,11 +119,20 @@ def restrictionMap {X : C} (S : Sieve X) {X' : C} (f : X' ⟶ X) :
     (coyoneda.obj (op (yoneda.obj X'))) ⟶ (coyoneda.obj (op (S.pullback f).functor)) :=
   coyoneda.map (S.pullback f).functorInclusion.op
 
--- lemma restrictionMap_comp {X : C} {P : Cᵒᵖ ⥤ Type u}  {S : Sieve X} {Y Z : C} {g : Z ⟶ Y} (f : Y ⟶ X) :
---      restrictionMap P S (g ≫ f) = restrictionMap P (S.pullback f) g := sorry
+def restrictionMap' {X : C} (S : Sieve X):
+    (coyoneda.obj (op (yoneda.obj X))) ⟶ (coyoneda.obj (op S.functor)) :=
+  coyoneda.map S.functorInclusion.op
 
 def isIso_restrictionMap (XS : (X : C) × Sieve X) (P : Cᵒᵖ ⥤ Type u) : Prop :=
   ∀ {X' : C} (f : X' ⟶ XS.1), IsIso ((restrictionMap XS.2 f).app P)
+
+lemma isIso_restrictionMap'_of_isIso_restrictionMap {XS : (X : C) × Sieve X} {P : Cᵒᵖ ⥤ Type u} (h : isIso_restrictionMap XS P) :
+    IsIso ((restrictionMap' XS.2).app P) := by
+  have := h (𝟙 _)
+  simp [restrictionMap] at this
+  rw [Sieve.pullback_id] at this
+  unfold restrictionMap'
+  exact this
 
 theorem isIso_restrictionMap_iff_isSheafFor {X : C} (S : Sieve X) :
     (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (S.pullback f).arrows) ↔ isIso_restrictionMap ⟨X, S⟩ P := by
@@ -183,7 +192,7 @@ lemma isIso_restrictionMap_pullback {X : C} (S : Sieve X) (P : C ᵒᵖ ⥤ Type
 --TODO(@doctorn) move this out
 namespace Sieve
 
-  def functorInclusion_of_pullback {X : C} (S : Sieve X) {Y : C} (f : Y ⟶ X) :
+  def pullbackInclusion {X : C} (S : Sieve X) {Y : C} (f : Y ⟶ X) :
       (S.pullback f).functor ⟶ S.functor := by
     simp [Sieve.functor, Sieve.pullback]
     exact { app := fun Z ↦ fun ⟨g, hg⟩ ↦ ⟨g ≫ f, hg⟩ }
@@ -194,79 +203,56 @@ end Sieve
 def descends {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u) : Prop :=
   ∀ {Y : C} {f : Y ⟶ X}, S.arrows f → isIso_restrictionMap ⟨Y, R.pullback f⟩ P
 
-noncomputable def restrictionOfDescends {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
-    (hR : descends S R P)
-    {Z : C} {g : Z ⟶ X} (hg : S.arrows g) :
-    (yoneda.obj Z ⟶ P) ≅ (Sieve.pullback g R).functor ⟶ P := by
-  have := hR hg (𝟙 _)
-  have l := asIso ((restrictionMap (Sieve.pullback g R) (𝟙 Z)).app P)
-  simp at l
-  exact l
+lemma descends_of_pullback {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u} (hR : descends S R P) {Y : C} (f : Y ⟶ X) :
+    descends (S.pullback f) (R.pullback f) P := by
+  intros Z g hg
+  rw [← Sieve.pullback_comp]
+  unfold isIso_restrictionMap
+  intros W h
+  exact hR hg h
 
-noncomputable def yonedaLiftingOfDescends {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
-    (hR : descends S R P) {Z : C} {g : Z ⟶ X} (hg : S.arrows g) :
-    (R.functor ⟶ P) ⟶ (yoneda.obj Z ⟶ P) := by
-  let i := Sieve.functorInclusion_of_pullback R g
-  let l := (restrictionOfDescends hR hg).inv
-  exact ((yoneda.obj P).map i.op) ≫ l
+def pullbackFamily {X : C} {R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
+    (p : R.functor ⟶ P) {Y} (f : Y ⟶ X) : (R.pullback f).functor ⟶ P :=
+  Sieve.pullbackInclusion R f ≫ p
 
-noncomputable def liftingOfDescends {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
+noncomputable def liftingOfPullbackFamily {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u} (hR : descends S R P)
+    (p : R.functor ⟶ P) {Y} (f : {f : Y ⟶ X // S.arrows f}) : yoneda.obj Y ⟶ P := by
+  have := isIso_restrictionMap'_of_isIso_restrictionMap (hR f.2)
+  exact inv ((restrictionMap' (R.pullback f.1)).app P) (pullbackFamily p f.1)
+
+noncomputable def inducedFamily {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
     (hR : descends S R P) (p : R.functor ⟶ P) : (S.functor ⟶ P) where
-  app Z g := by
-    obtain ⟨_, hg⟩ := g
-    have := (curriedYonedaLemma'.hom.app P).app Z (yonedaLiftingOfDescends hR hg p)
-    simp [yonedaEvaluation] at this
-    exact this
-  naturality Z W f := by
-    ext ⟨g, hg⟩
-    simp
-    symm
+  app X f := (liftingOfPullbackFamily hR p f).app X (𝟙 _)
+  naturality X Y g := sorry -- by
+    -- ext f
+    -- simp
+    -- have := congrFun ((liftingOfPullbackFamily hR p f).naturality g) (𝟙 _)
+    -- simp at this
+    -- rw [← this]
 
-    let hgf := S.downward_closed hg f.unop
+    -- unfold liftingOfPullbackFamily
+    -- have: IsIso ((restrictionMap' (R.pullback (g.unop ≫ f.1))).app P) := sorry
+    -- have: IsIso ((restrictionMap' (R.pullback f.1)).app P) := sorry
 
-    have : (yoneda.obj P).map (yoneda.op.map f) (yonedaLiftingOfDescends hR hg p) = yonedaLiftingOfDescends hR hgf p := by
-      sorry
-
-    calc P.map f ((curriedYonedaLemma'.hom.app P).app Z (yonedaLiftingOfDescends hR hg p))
-      _ = ((curriedYonedaLemma'.hom.app P).app Z ≫ P.map f) (yonedaLiftingOfDescends hR hg p) := by simp
-      _ = ((yoneda.obj P).map (yoneda.op.map f) ≫ (curriedYonedaLemma'.hom.app P).app W) (yonedaLiftingOfDescends hR hg p) := by
-        have := (curriedYonedaLemma'.hom.app P).naturality
-        simp [Functor.id] at this
-        rw [← this]
-        rfl
-      _ = (curriedYonedaLemma'.hom.app P).app W ((yoneda.obj P).map (yoneda.op.map f) (yonedaLiftingOfDescends hR hg p)) := by simp
-      _ = (curriedYonedaLemma'.hom.app P).app W (yonedaLiftingOfDescends hR hgf p) := by rw [this]
+    -- calc (inv ((restrictionMap' (R.pullback (g.unop ≫ f.1))).app P) (pullbackFamily p (g.unop ≫ f.1))).app Y (𝟙 _)
+    --   _ = (inv ((restrictionMap' (R.pullback f.1)).app P) (pullbackFamily p f.1)).app Y g.unop := sorry
 
 lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u)
-    (hS : isIso_restrictionMap ⟨X, S⟩ P)
-    (hR : descends S R P) :
-    isIso_restrictionMap ⟨X, R⟩ P := by
+    (hS : isIso_restrictionMap ⟨X, S⟩ P) (hR : descends S R P) : isIso_restrictionMap ⟨X, R⟩ P := by
   unfold isIso_restrictionMap restrictionMap
   intros Y f
   unfold isIso_restrictionMap at hS
 
-  have hRf: descends (Sieve.pullback f S) (Sieve.pullback f R) P := by
-    intros Z g hg
-    rw [← Sieve.pullback_comp]
-    have: S.arrows (g ≫ f) := hg
-    unfold isIso_restrictionMap
-    intros W h
-    exact hR this h
+  have := hS f
+  have hRf: descends (S.pullback f) (R.pullback f) P := descends_of_pullback hR f
 
-  have: IsIso ((restrictionMap S f).app P) := hS f
-
-  use fun i ↦ inv ((restrictionMap S f).app P) (liftingOfDescends hRf i)
+  rw [isIso_iff_bijective, Function.bijective_iff_existsUnique]
+  intro p
+  use inv ((restrictionMap S f).app P) (inducedFamily hRf p)
   apply And.intro
-  . ext p
-    simp
-    have: liftingOfDescends hRf ((Sieve.pullback f R).functorInclusion ≫ p) = (restrictionMap S f).app P p := sorry
-
-    calc inv ((restrictionMap S f).app P) (liftingOfDescends hRf ((Sieve.pullback f R).functorInclusion ≫ p))
-      _ = inv ((restrictionMap S f).app P) ((restrictionMap S f).app P p) := congrArg (inv ((restrictionMap S f).app P)) this
-      _ = ((restrictionMap S f).app P ≫ inv ((restrictionMap S f).app P)) p := by simp
-      _ = _ := by rw [IsIso.hom_inv_id]
-      _ = p := by simp
   . sorry
+  . intros q hq
+    sorry
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints isIso_restrictionMap) : GrothendieckTopology C := by
@@ -285,20 +271,20 @@ instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     intros P _
     exact isIso_restrictionMap_transitive S R P (by tauto) (by tauto)
 
-open GrothendieckTopos
+-- open GrothendieckTopos
 
-variable {I : Set (Cᵒᵖ ⥤ Type u)}
+-- variable {I : Set (Cᵒᵖ ⥤ Type u)}
 
-theorem mem_rightFixedPoint (ℰ : Subtopos (Cᵒᵖ ⥤ Type u)) (h : ∀ P, ℰ.obj P ↔ P ∈ I) :
-    I ∈ rightFixedPoints isIso_restrictionMap := by admit
+-- theorem mem_rightFixedPoint (ℰ : Subtopos (Cᵒᵖ ⥤ Type u)) (h : ∀ P, ℰ.obj P ↔ P ∈ I) :
+--     I ∈ rightFixedPoints isIso_restrictionMap := sorry
 
-instance subtopos_of_rightFixedPoint (h : I ∈ rightFixedPoints isIso_restrictionMap) :
-    Subtopos (Cᵒᵖ ⥤ Type u) where
-  obj P := P ∈ I
-  adj := sorry
-  flat := sorry
-  mem := sorry
+-- instance subtopos_of_rightFixedPoint (h : I ∈ rightFixedPoints isIso_restrictionMap) :
+--     Subtopos (Cᵒᵖ ⥤ Type u) where
+--   obj P := P ∈ I
+--   adj := sorry
+--   flat := sorry
+--   mem := sorry
 
-instance : GrothendieckTopology C ≃ Subtopos (Cᵒᵖ ⥤ Type u) := sorry
+-- instance : GrothendieckTopology C ≃ Subtopos (Cᵒᵖ ⥤ Type u) := sorry
 
 end Subtopos
