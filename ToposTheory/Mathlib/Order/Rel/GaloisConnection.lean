@@ -183,34 +183,69 @@ lemma isIso_restrictionMap_pullback {X : C} (S : Sieve X) (P : C ᵒᵖ ⥤ Type
 --TODO(@doctorn) move this out
 namespace Sieve
 
-  def functorInclusion_of_pullback {X : C} (S : Sieve X) {Y : C} (f : Y ⟶ X) : (S.pullback f).functor ⟶ S.functor := by
+  def functorInclusion_of_pullback {X : C} (S : Sieve X) {Y : C} (f : Y ⟶ X) :
+      (S.pullback f).functor ⟶ S.functor := by
     simp [Sieve.functor, Sieve.pullback]
     exact { app := fun Z ↦ fun ⟨g, hg⟩ ↦ ⟨g ≫ f, hg⟩ }
 
 end Sieve
 
-noncomputable def liftingOfTransitivity {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u)
-    (hR : ∀ {Y : C} {f : Y ⟶ X}, S.arrows f → isIso_restrictionMap ⟨Y, R.pullback f⟩ P)
-    (p : R.functor ⟶ P) : (S.functor ⟶ P) where
+--TODO(@doctorn) rename this
+def descends {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u) : Prop :=
+  ∀ {Y : C} {f : Y ⟶ X}, S.arrows f → isIso_restrictionMap ⟨Y, R.pullback f⟩ P
+
+noncomputable def restrictionOfDescends {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
+    (hR : descends S R P)
+    {Z : C} {g : Z ⟶ X} (hg : S.arrows g) :
+    (yoneda.obj Z ⟶ P) ≅ (Sieve.pullback g R).functor ⟶ P := by
+  have := hR hg (𝟙 _)
+  have l := asIso ((restrictionMap (Sieve.pullback g R) (𝟙 Z)).app P)
+  simp at l
+  exact l
+
+noncomputable def yonedaLiftingOfDescends {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
+    (hR : descends S R P) {Z : C} {g : Z ⟶ X} (hg : S.arrows g) :
+    (R.functor ⟶ P) ⟶ (yoneda.obj Z ⟶ P) := by
+  let i := Sieve.functorInclusion_of_pullback R g
+  let l := (restrictionOfDescends hR hg).inv
+  exact ((yoneda.obj P).map i.op) ≫ l
+
+noncomputable def liftingOfDescends {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
+    (hR : descends S R P) (p : R.functor ⟶ P) : (S.functor ⟶ P) where
   app Z g := by
-    obtain ⟨g, hg⟩ := g
-    have := hR hg (𝟙 _)
-    let i := Sieve.functorInclusion_of_pullback R g
-    let l := inv ((restrictionMap (Sieve.pullback g R) (𝟙 _)).app P)
-    simp at l
-    exact (l (i ≫ p)).app Z (𝟙 _)
-  naturality Z W f := sorry
+    obtain ⟨_, hg⟩ := g
+    have := (curriedYonedaLemma'.hom.app P).app Z (yonedaLiftingOfDescends hR hg p)
+    simp [yonedaEvaluation] at this
+    exact this
+  naturality Z W f := by
+    ext ⟨g, hg⟩
+    simp
+    symm
+
+    let hgf := S.downward_closed hg f.unop
+
+    have : (yoneda.obj P).map (yoneda.op.map f) (yonedaLiftingOfDescends hR hg p) = yonedaLiftingOfDescends hR hgf p := by
+      sorry
+
+    calc P.map f ((curriedYonedaLemma'.hom.app P).app Z (yonedaLiftingOfDescends hR hg p))
+      _ = ((curriedYonedaLemma'.hom.app P).app Z ≫ P.map f) (yonedaLiftingOfDescends hR hg p) := by simp
+      _ = ((yoneda.obj P).map (yoneda.op.map f) ≫ (curriedYonedaLemma'.hom.app P).app W) (yonedaLiftingOfDescends hR hg p) := by
+        have := (curriedYonedaLemma'.hom.app P).naturality
+        simp [Functor.id] at this
+        rw [← this]
+        rfl
+      _ = (curriedYonedaLemma'.hom.app P).app W ((yoneda.obj P).map (yoneda.op.map f) (yonedaLiftingOfDescends hR hg p)) := by simp
+      _ = (curriedYonedaLemma'.hom.app P).app W (yonedaLiftingOfDescends hR hgf p) := by rw [this]
 
 lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u)
     (hS : isIso_restrictionMap ⟨X, S⟩ P)
-    (hR : ∀ {Y : C} {f : Y ⟶ X}, S.arrows f → isIso_restrictionMap ⟨Y, R.pullback f⟩ P) :
+    (hR : descends S R P) :
     isIso_restrictionMap ⟨X, R⟩ P := by
   unfold isIso_restrictionMap restrictionMap
   intros Y f
   unfold isIso_restrictionMap at hS
 
-  have: ∀ {Z : C} {g : Z ⟶ Y}, (Sieve.pullback f S).arrows g
-      → isIso_restrictionMap ⟨Z, Sieve.pullback g (Sieve.pullback f R)⟩ P := by
+  have hRf: descends (Sieve.pullback f S) (Sieve.pullback f R) P := by
     intros Z g hg
     rw [← Sieve.pullback_comp]
     have: S.arrows (g ≫ f) := hg
@@ -218,8 +253,20 @@ lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ 
     intros W h
     exact hR this h
 
-  use fun i ↦ inv (I := hS f) (liftingOfTransitivity (S.pullback f) (R.pullback f) P this i)
-  sorry
+  have: IsIso ((restrictionMap S f).app P) := hS f
+
+  use fun i ↦ inv ((restrictionMap S f).app P) (liftingOfDescends hRf i)
+  apply And.intro
+  . ext p
+    simp
+    have: liftingOfDescends hRf ((Sieve.pullback f R).functorInclusion ≫ p) = (restrictionMap S f).app P p := sorry
+
+    calc inv ((restrictionMap S f).app P) (liftingOfDescends hRf ((Sieve.pullback f R).functorInclusion ≫ p))
+      _ = inv ((restrictionMap S f).app P) ((restrictionMap S f).app P p) := congrArg (inv ((restrictionMap S f).app P)) this
+      _ = ((restrictionMap S f).app P ≫ inv ((restrictionMap S f).app P)) p := by simp
+      _ = _ := by rw [IsIso.hom_inv_id]
+      _ = p := by simp
+  . sorry
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints isIso_restrictionMap) : GrothendieckTopology C := by
