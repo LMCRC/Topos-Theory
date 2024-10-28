@@ -102,7 +102,7 @@ class IsPresentation : Prop where
   /-- Its essential image consists exactly of the `J`sheaves. -/
   isSheaf_iff : ∀ ⦃P : Cᵒᵖ ⥤ Type v₁⦄, IsSheaf J P ↔ P ∈ essImage (associatedFunctor l)
   /-- There exists a cocontinuous functor extending the functor `l` along the Yoneda embedding. -/
-  left_adjoint : ∃ (F : (Cᵒᵖ ⥤ Type v₂) ⥤ E) (_ : Limits.PreservesColimits F), yoneda ⋙ F = l
+  left_adjoint : ∃ (L : (Cᵒᵖ ⥤ Type v₂) ⥤ E) (_ : Limits.PreservesColimits L), yoneda ⋙ L = l
 
 /-
 open Sieve Presieve
