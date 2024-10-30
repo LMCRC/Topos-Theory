@@ -197,11 +197,20 @@ namespace Sieve
     simp [Sieve.functor, Sieve.pullback]
     exact { app := fun Z ↦ fun ⟨g, hg⟩ ↦ ⟨g ≫ f, hg⟩ }
 
+  def pullback_comp_functor_eq {X : C} (S : Sieve X) {Y Z : C} (f : Y ⟶ X) (g : Z ⟶ Y) :
+      (S.pullback (g ≫ f)).functor = ((S.pullback f).pullback g).functor := by
+    rw [Sieve.pullback_comp]
+
+  -- I originally had eqToIso of the above, but then the following lemma wouldn't come out
   def compPullbackInclusionIso {X : C} (S : Sieve X) {Y Z : C} (f : Y ⟶ X) (g : Z ⟶ Y) :
-      (S.pullback (g ≫ f)).functor ≅ ((S.pullback f).pullback g).functor := by
-    have := Sieve.pullback_comp S (f := f) (g := g)
-    have := congrArg (fun S ↦ S.functor) this
-    exact eqToIso this
+      (S.pullback (g ≫ f)).functor ≅ ((S.pullback f).pullback g).functor where
+    hom := { app := by intros W i; rw [← pullback_comp_functor_eq]; exact i }
+    inv := { app := by intros W i; rw [pullback_comp_functor_eq]; exact i }
+
+  def compPullbackInclusionIso_eq_cast {X : C} (S : Sieve X) {Y Z : C} (f : Y ⟶ X) (g : Z ⟶ Y) :
+      ∀ W i, (compPullbackInclusionIso S f g).hom.app W i = cast (congrArg (fun F ↦ F.obj W) (pullback_comp_functor_eq S f g)) i := by
+    intros W i
+    simp [compPullbackInclusionIso]
 end Sieve
 
 --TODO(@doctorn) rename this
@@ -232,9 +241,15 @@ lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ 
   -- First projection
   let π : ∀ {Y : C} (g : Y ⟶ X), (R.pullback g).functor ⟶ yoneda.obj Y := fun g ↦ (R.pullback g).functorInclusion
   -- Composition lemma
-  have composition: ∀ {Y Z : C} (g : Y ⟶ X) (h : Z ⟶ Y), (α g h).hom ≫ ι (R.pullback g) h ≫ ι R g = ι R (h ≫ g) := sorry
+  have composition: ∀ {Y Z : C} (g : Y ⟶ X) (h : Z ⟶ Y), (α g h).hom ≫ ι (R.pullback g) h ≫ ι R g = ι R (h ≫ g) := by
+    intros Y Z g h
+    ext W i
+    simp [ι, Sieve.pullbackInclusion, α, Sieve.compPullbackInclusionIso_eq_cast]
   -- Naturality lemma
-  have naturality: ∀ {Y Z : C} (g : Y ⟶ X) (h : Z ⟶ Y), π (h ≫ g) ≫ yoneda.map h = (α g h).hom ≫ ι (R.pullback g) h ≫ π g := sorry
+  have naturality: ∀ {Y Z : C} (g : Y ⟶ X) (h : Z ⟶ Y), π (h ≫ g) ≫ yoneda.map h = (α g h).hom ≫ ι (R.pullback g) h ≫ π g := by
+    intros Y Z g h
+    ext W i
+    simp [ι, Sieve.pullbackInclusion, π, α, Sieve.compPullbackInclusionIso_eq_cast]
   -- Restriction map for pullback sieve
   let ρ : ∀ {Y : C} {g : Y ⟶ X}, S.arrows g → ((yoneda.obj Y ⟶ P) ≅ ((R.pullback g).functor ⟶ P)) := by
     intros Y g hg
@@ -262,7 +277,23 @@ lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ 
   -- Yoneda of previous construction
   let σ : (R.functor ⟶ P) → (S.functor ⟶ P) := fun p ↦ η p ≫ θ.hom
 
-  have: IsIso j := sorry
+  have: IsIso j := by
+    use σ ≫ inv i
+    apply And.intro
+    . ext q
+      simp
+      have: σ (j q) = i q := by
+        ext Y g
+        simp [σ, η]
+        sorry
+      calc inv i (σ (j q))
+        _ = inv i (i q) := by rw [this]
+        _ = (i ≫ inv i) q := by simp
+        _ = q := by rw [IsIso.hom_inv_id]; simp
+    . ext q
+      simp [σ]
+      ext Y g
+      sorry
 
   sorry
   -- unfold isIso_restrictionMap restrictionMap
