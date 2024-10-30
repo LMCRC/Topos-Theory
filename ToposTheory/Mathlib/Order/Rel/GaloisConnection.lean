@@ -245,11 +245,15 @@ lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ 
     intros Y Z g h
     ext W i
     simp [ι, Sieve.pullbackInclusion, α, Sieve.compPullbackInclusionIso_eq_cast]
-  -- Naturality lemma
-  have naturality: ∀ {Y Z : C} (g : Y ⟶ X) (h : Z ⟶ Y), π (h ≫ g) ≫ yoneda.map h = (α g h).hom ≫ ι (R.pullback g) h ≫ π g := by
+  -- Naturality lemmas
+  have naturality₁: ∀ {Y : C} (g : Y ⟶ X) (q : yoneda.obj X ⟶ P), π g ≫ yoneda.map g ≫ q = ι R g ≫ j q := by
+    intros Y g q
+    ext Z h
+    simp [π, ι, j, yoneda, restrictionMap', Sieve.pullbackInclusion]
+  have naturality₂: ∀ {Y Z : C} (g : Y ⟶ X) (h : Z ⟶ Y), π (h ≫ g) ≫ yoneda.map h = (α g h).hom ≫ ι (R.pullback g) h ≫ π g := by
     intros Y Z g h
     ext W i
-    simp [ι, Sieve.pullbackInclusion, π, α, Sieve.compPullbackInclusionIso_eq_cast]
+    simp [ι, π, α, Sieve.pullbackInclusion, Sieve.compPullbackInclusionIso_eq_cast]
   -- Restriction map for pullback sieve
   let ρ : ∀ {Y : C} {g : Y ⟶ X}, S.arrows g → ((yoneda.obj Y ⟶ P) ≅ ((R.pullback g).functor ⟶ P)) := by
     intros Y g hg
@@ -268,7 +272,7 @@ lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ 
         calc (ρ hgh).hom (yoneda.map h.unop ≫ (ρ hg).inv (ι R g ≫ p))
           _ = π (h.unop ≫ g) ≫ yoneda.map h.unop ≫ (ρ hg).inv (ι R g ≫ p) := by aesop_cat
           _ = (π (h.unop ≫ g) ≫ yoneda.map h.unop) ≫ (ρ hg).inv (ι R g ≫ p) := by rw [Category.assoc]
-          _ = ((α g h.unop).hom ≫ ι (R.pullback g) h.unop ≫ π g) ≫ (ρ hg).inv (ι R g ≫ p) := by rw [naturality]
+          _ = ((α g h.unop).hom ≫ ι (R.pullback g) h.unop ≫ π g) ≫ (ρ hg).inv (ι R g ≫ p) := by rw [naturality₂]
           _ = (α g h.unop).hom ≫ ι (R.pullback g) h.unop ≫ (ρ hg).hom ((ρ hg).inv (ι R g ≫ p)) := by aesop_cat
           _ = ι R (h.unop ≫ g) ≫ p := by simp [← composition]
 
@@ -283,9 +287,14 @@ lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ 
     . ext q
       simp
       have: σ (j q) = i q := by
-        ext Y g
+        ext Y ⟨g, hg⟩
         simp [σ, η]
-        sorry
+        calc θ.hom.app Y ((ρ hg).inv (ι R g ≫ j q))
+          _ = θ.hom.app Y ((ρ hg).inv (π g ≫ yoneda.map g ≫ q)) := by rw [naturality₁]
+          _ = θ.hom.app Y ((ρ hg).inv ((ρ hg).hom (yoneda.map g ≫ q))) := by aesop_cat
+          _ = θ.hom.app Y (yoneda.map g ≫ q) := by simp
+          _ = q.app Y g := by simp [yoneda, θ, curriedYonedaLemma', yonedaEquiv]
+          _ = (i q).app Y ⟨g, hg⟩ := by simp [i, restrictionMap']
       calc inv i (σ (j q))
         _ = inv i (i q) := by rw [this]
         _ = (i ≫ inv i) q := by simp
