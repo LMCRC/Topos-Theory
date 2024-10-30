@@ -14,19 +14,19 @@ import Mathlib.CategoryTheory.Yoneda
 /-!
 # Subobject classifiers
 
-Following [MLM94, Section I.3], we introduce the notion `CategoryTheory.Subobject.Classifier C` of
-subobject classifier in a category `C`.
+Following Section I.3 of [Sheaves in Geometry and Logic][MLM92], we introduce the notion
+`CategoryTheory.Subobject.Classifier C` of subobject classifier in a category `C`.
 
 ## Main Results
 
 ⋆ `CategoryTheory.Subobject.Classifier.is_representable` : a category `C` has a subobject classifier
-`Ω` if and only if the functor `CategoryTheory.Subobject.Sub` that pulls back monomorphisms is
-representable by `Ω` (Proposition 1 in Section I.3 of [MLM94]).
+`Ω` if and only if the subobjects functor `CategoryTheory.Subobject.Sub` that pulls back
+monomorphisms is representable by `Ω` (Proposition 1 in Section I.3 of [MLM94]).
 
 ## References
 
-⋆ [MLM94] Mac Lane, Saunders and Moerdijk, Ieke. "Sheaves in Geometry and Logic: a First
-Introduction to Topos Theory." 1992. http://link.springer.com/book/10.1007/978-1-4612-0927-0.
+* [S. MacLane and I. Moerdijk, *Sheaves in geometry and logic: A first introduction to topos
+  theory*][MLM92]
 
 ## Tags
 
@@ -37,15 +37,15 @@ namespace CategoryTheory.Subobject
 
 open CategoryTheory
 
-universe v
+universe u v
 
 /-! ### The notion of subobject classifier -/
 
-variable (C : Type v) [Category.{v} C]
+variable (C : Type u) [Category.{v} C]
 
 /-- A monomorphism `f` is a subobject classifier when it satisfies the universal property that every
     monomorphism is uniquely a pullback of `f`. -/
-def IsClassifier {C : Type v} [Category.{v} C] {Ω Ω₀ : C} (f : Ω₀ ⟶ Ω) [Mono f] : Prop :=
+def IsClassifier {C : Type u} [Category.{v} C] {Ω Ω₀ : C} (f : Ω₀ ⟶ Ω) [Mono f] : Prop :=
   ∀ {S X : C} {m : S ⟶ X} [Mono m],
   ∃ one, ∃! (χ : X ⟶ Ω), IsPullback one m f χ
 
@@ -63,9 +63,9 @@ def HasClassifier := Nonempty (Classifier C)
 
 section Sub
 
-variable {C : Type v} [Category.{v} C]
+variable {C : Type u} [Category.{v} C]
 
-instance Sub : Cᵒᵖ ⥤ Type v where
+instance Sub : Cᵒᵖ ⥤ Type (max u v) where
   obj := Subobject
 
   map := by {
@@ -88,7 +88,7 @@ namespace Classifier
 
 open CategoryTheory.Yoneda
 
-theorem is_representable : HasClassifier C ↔ (@Sub C).Representable := by {
+theorem is_representable : HasClassifier C ↔ (@Sub C).IsRepresentable := by {
   sorry
 }
 
