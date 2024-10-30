@@ -276,7 +276,7 @@ lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ 
   }
   -- Yoneda of previous construction
   let σ : (R.functor ⟶ P) → (S.functor ⟶ P) := fun p ↦ η p ≫ θ.hom
-
+  -- Now, j becomes an isomorphism
   have: IsIso j := by
     use σ ≫ inv i
     apply And.intro
