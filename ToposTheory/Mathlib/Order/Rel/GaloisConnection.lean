@@ -197,6 +197,11 @@ namespace Sieve
     simp [Sieve.functor, Sieve.pullback]
     exact { app := fun Z ↦ fun ⟨g, hg⟩ ↦ ⟨g ≫ f, hg⟩ }
 
+  def compPullbackInclusionIso {X : C} (S : Sieve X) {Y Z : C} (f : Y ⟶ X) (g : Z ⟶ Y) :
+      (S.pullback (g ≫ f)).functor ≅ ((S.pullback f).pullback g).functor := by
+    have := Sieve.pullback_comp S (f := f) (g := g)
+    have := congrArg (fun S ↦ S.functor) this
+    exact eqToIso this
 end Sieve
 
 --TODO(@doctorn) rename this
@@ -211,48 +216,69 @@ lemma descends_of_pullback {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u} (hR
   intros W h
   exact hR hg h
 
-def pullbackFamily {X : C} {R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
-    (p : R.functor ⟶ P) {Y} (f : Y ⟶ X) : (R.pullback f).functor ⟶ P :=
-  Sieve.pullbackInclusion R f ≫ p
-
-noncomputable def liftingOfPullbackFamily {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u} (hR : descends S R P)
-    (p : R.functor ⟶ P) {Y} (f : {f : Y ⟶ X // S.arrows f}) : yoneda.obj Y ⟶ P := by
-  have := isIso_restrictionMap'_of_isIso_restrictionMap (hR f.2)
-  exact inv ((restrictionMap' (R.pullback f.1)).app P) (pullbackFamily p f.1)
-
-noncomputable def inducedFamily {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
-    (hR : descends S R P) (p : R.functor ⟶ P) : (S.functor ⟶ P) where
-  app X f := (liftingOfPullbackFamily hR p f).app X (𝟙 _)
-  naturality X Y g := sorry -- by
-    -- ext f
-    -- simp
-    -- have := congrFun ((liftingOfPullbackFamily hR p f).naturality g) (𝟙 _)
-    -- simp at this
-    -- rw [← this]
-
-    -- unfold liftingOfPullbackFamily
-    -- have: IsIso ((restrictionMap' (R.pullback (g.unop ≫ f.1))).app P) := sorry
-    -- have: IsIso ((restrictionMap' (R.pullback f.1)).app P) := sorry
-
-    -- calc (inv ((restrictionMap' (R.pullback (g.unop ≫ f.1))).app P) (pullbackFamily p (g.unop ≫ f.1))).app Y (𝟙 _)
-    --   _ = (inv ((restrictionMap' (R.pullback f.1)).app P) (pullbackFamily p f.1)).app Y g.unop := sorry
-
 lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u)
     (hS : isIso_restrictionMap ⟨X, S⟩ P) (hR : descends S R P) : isIso_restrictionMap ⟨X, R⟩ P := by
-  unfold isIso_restrictionMap restrictionMap
-  intros Y f
-  unfold isIso_restrictionMap at hS
+  -- Restrictions of the two sieves at P
+  let i := (restrictionMap' S).app P
+  let j := (restrictionMap' R).app P
+  -- We immediately know i is an isomorphism
+  have := isIso_restrictionMap'_of_isIso_restrictionMap hS
+  -- Recall the Yoneda lemma
+  let θ := curriedYonedaLemma'.app P
+  -- Aliases for pullback inclusion
+  let ι : ∀ {X Y : C} (R : Sieve X) (g : Y ⟶ X), ((R.pullback g).functor ⟶ R.functor) := fun R g ↦ Sieve.pullbackInclusion R g
+  let α : ∀ {Y Z : C} (g : Y ⟶ X) (h : Z ⟶ Y), (R.pullback (h ≫ g)).functor ≅ ((R.pullback g).pullback h).functor :=
+    fun g h ↦ Sieve.compPullbackInclusionIso R g h
+  -- First projection
+  let π : ∀ {Y : C} (g : Y ⟶ X), (R.pullback g).functor ⟶ yoneda.obj Y := fun g ↦ (R.pullback g).functorInclusion
+  -- Composition lemma
+  have composition: ∀ {Y Z : C} (g : Y ⟶ X) (h : Z ⟶ Y), (α g h).hom ≫ ι (R.pullback g) h ≫ ι R g = ι R (h ≫ g) := sorry
+  -- Naturality lemma
+  have naturality: ∀ {Y Z : C} (g : Y ⟶ X) (h : Z ⟶ Y), π (h ≫ g) ≫ yoneda.map h = (α g h).hom ≫ ι (R.pullback g) h ≫ π g := sorry
+  -- Restriction map for pullback sieve
+  let ρ : ∀ {Y : C} {g : Y ⟶ X}, S.arrows g → ((yoneda.obj Y ⟶ P) ≅ ((R.pullback g).functor ⟶ P)) := by
+    intros Y g hg
+    have := isIso_restrictionMap'_of_isIso_restrictionMap (hR hg)
+    exact asIso ((restrictionMap' (R.pullback g)).app P)
+  -- Construction of elements from matching families
+  let η : (R.functor ⟶ P) → (S.functor ⟶ (yoneda.op ⋙ (yoneda.obj P))) := fun p ↦ {
+    app := fun Y ⟨g, hg⟩ ↦ (ρ hg).inv (ι R g ≫ p)
+    naturality := by
+      intros Y Z h
+      ext ⟨g, hg⟩
+      simp
 
-  have := hS f
-  have hRf: descends (S.pullback f) (R.pullback f) P := descends_of_pullback hR f
+      have hgh := S.downward_closed hg h.unop
+      have := by
+        calc (ρ hgh).hom (yoneda.map h.unop ≫ (ρ hg).inv (ι R g ≫ p))
+          _ = π (h.unop ≫ g) ≫ yoneda.map h.unop ≫ (ρ hg).inv (ι R g ≫ p) := by aesop_cat
+          _ = (π (h.unop ≫ g) ≫ yoneda.map h.unop) ≫ (ρ hg).inv (ι R g ≫ p) := by rw [Category.assoc]
+          _ = ((α g h.unop).hom ≫ ι (R.pullback g) h.unop ≫ π g) ≫ (ρ hg).inv (ι R g ≫ p) := by rw [naturality]
+          _ = (α g h.unop).hom ≫ ι (R.pullback g) h.unop ≫ (ρ hg).hom ((ρ hg).inv (ι R g ≫ p)) := by aesop_cat
+          _ = ι R (h.unop ≫ g) ≫ p := by simp [← composition]
 
-  rw [isIso_iff_bijective, Function.bijective_iff_existsUnique]
-  intro p
-  use inv ((restrictionMap S f).app P) (inducedFamily hRf p)
-  apply And.intro
-  . sorry
-  . intros q hq
-    sorry
+      simp [← this]
+  }
+  -- Yoneda of previous construction
+  let σ : (R.functor ⟶ P) → (S.functor ⟶ P) := fun p ↦ η p ≫ θ.hom
+
+  have: IsIso j := sorry
+
+  sorry
+  -- unfold isIso_restrictionMap restrictionMap
+  -- intros Y f
+  -- unfold isIso_restrictionMap at hS
+
+  -- have := hS f
+  -- have hRf: descends (S.pullback f) (R.pullback f) P := descends_of_pullback hR f
+
+  -- rw [isIso_iff_bijective, Function.bijective_iff_existsUnique]
+  -- intro p
+  -- use inv ((restrictionMap S f).app P) (inducedFamily hRf p)
+  -- apply And.intro
+  -- . sorry
+  -- . intros q hq
+  --   sorry
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints isIso_restrictionMap) : GrothendieckTopology C := by
