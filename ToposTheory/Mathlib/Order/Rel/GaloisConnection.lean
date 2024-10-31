@@ -204,13 +204,14 @@ namespace Sieve
   -- I originally had eqToIso of the above, but then the following lemma wouldn't come out
   def compPullbackInclusionIso {X : C} (S : Sieve X) {Y Z : C} (f : Y ⟶ X) (g : Z ⟶ Y) :
       (S.pullback (g ≫ f)).functor ≅ ((S.pullback f).pullback g).functor where
-    hom := { app := by intros W i; rw [← pullback_comp_functor_eq]; exact i }
-    inv := { app := by intros W i; rw [pullback_comp_functor_eq]; exact i }
+    hom := { app := by intros _ i; rw [← pullback_comp_functor_eq]; exact i }
+    inv := { app := by intros _ i; rw [pullback_comp_functor_eq]; exact i }
 
   def compPullbackInclusionIso_eq_cast {X : C} (S : Sieve X) {Y Z : C} (f : Y ⟶ X) (g : Z ⟶ Y) :
       ∀ W i, (compPullbackInclusionIso S f g).hom.app W i = cast (congrArg (fun F ↦ F.obj W) (pullback_comp_functor_eq S f g)) i := by
     intros W i
     simp [compPullbackInclusionIso]
+
 end Sieve
 
 --TODO(@doctorn) rename this
@@ -225,8 +226,9 @@ lemma descends_of_pullback {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u} (hR
   intros W h
   exact hR hg h
 
-lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u)
-    (hS : isIso_restrictionMap ⟨X, S⟩ P) (hR : descends S R P) : isIso_restrictionMap ⟨X, R⟩ P := by
+-- TODO(@doctorn) this needs a massive amount of refactoring
+lemma isIso_restrictionMap'_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u)
+    (hS : isIso_restrictionMap ⟨X, S⟩ P) (hR : descends S R P) : IsIso ((restrictionMap' R).app P) := by
   -- Restrictions of the two sieves at P
   let i := (restrictionMap' S).app P
   let j := (restrictionMap' R).app P
@@ -265,8 +267,6 @@ lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ 
     naturality := by
       intros Y Z h
       ext ⟨g, hg⟩
-      simp
-
       have hgh := S.downward_closed hg h.unop
       have := by
         calc (ρ hgh).hom (yoneda.map h.unop ≫ (ρ hg).inv (ι R g ≫ p))
@@ -275,50 +275,47 @@ lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ 
           _ = ((α g h.unop).hom ≫ ι (R.pullback g) h.unop ≫ π g) ≫ (ρ hg).inv (ι R g ≫ p) := by rw [naturality₂]
           _ = (α g h.unop).hom ≫ ι (R.pullback g) h.unop ≫ (ρ hg).hom ((ρ hg).inv (ι R g ≫ p)) := by aesop_cat
           _ = ι R (h.unop ≫ g) ≫ p := by simp [← composition]
-
       simp [← this]
   }
   -- Yoneda of previous construction
   let σ : (R.functor ⟶ P) → (S.functor ⟶ P) := fun p ↦ η p ≫ θ.hom
-  -- Now, j becomes an isomorphism
+  -- We know we have a section of inv i
+  have sec: j ≫ σ ≫ inv i = 𝟙 _ := by
+    ext q
+    simp
+    have: σ (j q) = i q := by
+      ext Y ⟨g, hg⟩
+      simp [σ, η]
+      calc θ.hom.app Y ((ρ hg).inv (ι R g ≫ j q))
+        _ = θ.hom.app Y ((ρ hg).inv (π g ≫ yoneda.map g ≫ q)) := by rw [naturality₁]
+        _ = θ.hom.app Y ((ρ hg).inv ((ρ hg).hom (yoneda.map g ≫ q))) := by aesop_cat
+        _ = θ.hom.app Y (yoneda.map g ≫ q) := by simp
+        _ = q.app Y g := by simp [yoneda, θ, curriedYonedaLemma', yonedaEquiv]
+        _ = (i q).app Y ⟨g, hg⟩ := by simp [i, restrictionMap']
+    calc inv i (σ (j q)) = inv i (i q) := by rw [this]
+      _ = (i ≫ inv i) q := by simp
+      _ = q := by rw [IsIso.hom_inv_id]; simp
+  -- We also get a commuting triangle
+  have commutes: j ≫ σ = i := by
+    calc j ≫ σ = j ≫ σ ≫ inv i ≫ i := by simp
+      _ = (j ≫ σ ≫ inv i) ≫ i := by simp
+      _ = 𝟙 _ ≫ i := by rw [sec]
+      _ = i := by simp
+  -- Now j is an isomorphism
   have: IsIso j := by
     use σ ≫ inv i
     apply And.intro
-    . ext q
-      simp
-      have: σ (j q) = i q := by
-        ext Y ⟨g, hg⟩
-        simp [σ, η]
-        calc θ.hom.app Y ((ρ hg).inv (ι R g ≫ j q))
-          _ = θ.hom.app Y ((ρ hg).inv (π g ≫ yoneda.map g ≫ q)) := by rw [naturality₁]
-          _ = θ.hom.app Y ((ρ hg).inv ((ρ hg).hom (yoneda.map g ≫ q))) := by aesop_cat
-          _ = θ.hom.app Y (yoneda.map g ≫ q) := by simp
-          _ = q.app Y g := by simp [yoneda, θ, curriedYonedaLemma', yonedaEquiv]
-          _ = (i q).app Y ⟨g, hg⟩ := by simp [i, restrictionMap']
-      calc inv i (σ (j q))
-        _ = inv i (i q) := by rw [this]
-        _ = (i ≫ inv i) q := by simp
-        _ = q := by rw [IsIso.hom_inv_id]; simp
-    . ext q
-      simp [σ]
-      ext Y g
-      sorry
+    . exact sec
+    . sorry -- This should just be the last sentence on slide 26 of Lafforgue's presentation, but I can't make sense of it...
+  exact this
 
-  sorry
-  -- unfold isIso_restrictionMap restrictionMap
-  -- intros Y f
-  -- unfold isIso_restrictionMap at hS
-
-  -- have := hS f
-  -- have hRf: descends (S.pullback f) (R.pullback f) P := descends_of_pullback hR f
-
-  -- rw [isIso_iff_bijective, Function.bijective_iff_existsUnique]
-  -- intro p
-  -- use inv ((restrictionMap S f).app P) (inducedFamily hRf p)
-  -- apply And.intro
-  -- . sorry
-  -- . intros q hq
-  --   sorry
+lemma isIso_restrictionMap_transitive {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u)
+    (hS : isIso_restrictionMap ⟨X, S⟩ P) (hR : descends S R P) : isIso_restrictionMap ⟨X, R⟩ P := by
+  unfold isIso_restrictionMap restrictionMap
+  intros Y f
+  have: IsIso ((restrictionMap' (R.pullback f)).app P) :=
+    isIso_restrictionMap'_transitive (S.pullback f) (R.pullback f) P (isIso_restrictionMap_pullback S P hS f) (descends_of_pullback hR f)
+  exact this
 
 instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints isIso_restrictionMap) : GrothendieckTopology C := by
@@ -337,20 +334,20 @@ instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
     intros P _
     exact isIso_restrictionMap_transitive S R P (by tauto) (by tauto)
 
--- open GrothendieckTopos
+open GrothendieckTopos
 
--- variable {I : Set (Cᵒᵖ ⥤ Type u)}
+variable {I : Set (Cᵒᵖ ⥤ Type u)}
 
--- theorem mem_rightFixedPoint (ℰ : Subtopos (Cᵒᵖ ⥤ Type u)) (h : ∀ P, ℰ.obj P ↔ P ∈ I) :
---     I ∈ rightFixedPoints isIso_restrictionMap := sorry
+theorem mem_rightFixedPoint (ℰ : Subtopos (Cᵒᵖ ⥤ Type u)) (h : ∀ P, ℰ.obj P ↔ P ∈ I) :
+    I ∈ rightFixedPoints isIso_restrictionMap := sorry
 
--- instance subtopos_of_rightFixedPoint (h : I ∈ rightFixedPoints isIso_restrictionMap) :
---     Subtopos (Cᵒᵖ ⥤ Type u) where
---   obj P := P ∈ I
---   adj := sorry
---   flat := sorry
---   mem := sorry
+instance subtopos_of_rightFixedPoint (h : I ∈ rightFixedPoints isIso_restrictionMap) :
+    Subtopos (Cᵒᵖ ⥤ Type u) where
+  obj P := P ∈ I
+  adj := sorry
+  flat := sorry
+  mem := sorry
 
--- instance : GrothendieckTopology C ≃ Subtopos (Cᵒᵖ ⥤ Type u) := sorry
+instance : GrothendieckTopology C ≃ Subtopos (Cᵒᵖ ⥤ Type u) := sorry
 
 end Subtopos
