@@ -10,6 +10,7 @@ import Mathlib.CategoryTheory.Limits.Shapes.FiniteLimits
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.CommSq
 import Mathlib.CategoryTheory.Functor.Basic
 import Mathlib.CategoryTheory.Yoneda
+import Mathlib.CategoryTheory.Opposites
 
 /-!
 # Subobject classifiers
@@ -41,6 +42,8 @@ universe u v
 
 /-! ### The notion of subobject classifier -/
 
+section SubobjectClassifier
+
 variable (C : Type u) [Category.{v} C]
 
 /-- A monomorphism `f` is a subobject classifier when it satisfies the universal property that every
@@ -59,17 +62,27 @@ class Classifier where
     is a subobject classifier. -/
 def HasClassifier := Nonempty (Classifier C)
 
+end SubobjectClassifier
+
 /-! ### The presheaf of subobjects `Sub` -/
 
 section Sub
 
-variable {C : Type u} [Category.{v} C]
+variable {C : Type u} [Category.{v} C] [Limits.HasPullbacks C]
 
-instance Sub : Cᵒᵖ ⥤ Type (max u v) where
+lemma Subobject_op_eq (X : Cᵒᵖ) : Subobject (Opposite.unop X) = Subobject X := by {
+  sorry
+}
+
+noncomputable instance Sub : Cᵒᵖ ⥤ Type (max u v) where
   obj := Subobject
 
   map := by {
-    sorry
+    intro X Y f
+    have F := pullback f.unop
+    simp only [← Subobject_op_eq]
+    intro m
+    exact (F.obj m)
   }
 
   map_id := by {
@@ -87,6 +100,8 @@ end Sub
 namespace Classifier
 
 open CategoryTheory.Yoneda
+
+variable {C : Type u} [Category.{v} C] [Limits.HasPullbacks C]
 
 theorem is_representable : HasClassifier C ↔ (@Sub C).IsRepresentable := by {
   sorry
