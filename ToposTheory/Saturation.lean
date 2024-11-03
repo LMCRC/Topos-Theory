@@ -31,27 +31,12 @@ lemma imageSieve_identityElement_le {X : C} (S : Sieve X) :
     S ≤ Presheaf.imageSieve (sheafifyMap J S.functorInclusion) (identityElement J X) := by
   simp [Presheaf.imageSieve]
   intros Y f hf
-
   use (toSheafify J S.functor).app (op Y) (by simp [Sieve.functor]; exact ⟨f, hf⟩)
-
-  -- NOTE(@doctorn) this calc block should not have to be this complicated (look how simple the steps are!).
-  -- For whatever reason, I couldn't get Lean4 to accept that the previous lemma would apply without this
-  -- massive blob of symbols. I'd really like to fix this...
-  calc ((sheafifyMap J S.functorInclusion).app (op Y)) ((toSheafify J S.functor).app (op Y) ⟨f, hf⟩)
-    _ = ((toSheafify J S.functor).app (op Y) ≫ ((sheafifyMap J S.functorInclusion).app (op Y))) ⟨f, hf⟩
-      := by simp
-    _ = ((toSheafify J S.functor) ≫ (sheafifyMap J S.functorInclusion)).app (op Y) ⟨f, hf⟩
-      := by rw [← NatTrans.comp_app]
+  calc ((toSheafify J S.functor).app (op Y) ≫ ((sheafifyMap J S.functorInclusion).app (op Y))) ⟨f, hf⟩
     _ = (S.functorInclusion ≫ (toSheafify J (yoneda.obj X))).app (op Y) ⟨f , hf⟩
-      := by rw [toSheafify_naturality J (S.functorInclusion)]
-    _ = ((S.functorInclusion.app (op Y)) ≫ (toSheafify J (yoneda.obj X)).app (op Y)) ⟨f , hf⟩
-      := by rw [NatTrans.comp_app]
-    _ = (toSheafify J (yoneda.obj X)).app (op Y) (S.functorInclusion.app (op Y) ⟨f , hf⟩)
-      := by simp
-    _ = (toSheafify J (yoneda.obj X)).app (op Y) f
-      := by unfold Sieve.functorInclusion; simp
+      := by rw [← NatTrans.comp_app, toSheafify_naturality J (S.functorInclusion)]
     _ = (sheafify J (yoneda.obj X)).map f.op (identityElement J X)
-      := (sheafify_identityElement_naturality J f).symm
+      := by rw [NatTrans.comp_app]; simp [Sieve.functorInclusion]; exact (sheafify_identityElement_naturality J f).symm
 
 private
 lemma imageSieve_identityElement_ge {X : C} (S : Sieve X) :
@@ -81,10 +66,8 @@ theorem isIso_iff_isIso_val {P Q : Sheaf J (Type u)} (α : P ⟶ Q) :
   have: IsIso α.val ↔ IsIso ((sheafToPresheaf J (Type u)).map α) := by simp [sheafToPresheaf]
   rw [this]
   apply Iff.intro
-  . intro
-    exact (sheafToPresheaf J (Type u)).map_isIso α
-  . intro
-    exact (fullyFaithfulSheafToPresheaf J (Type u)).isIso_of_isIso_map α
+  . intro; exact (sheafToPresheaf J (Type u)).map_isIso α
+  . intro; exact (fullyFaithfulSheafToPresheaf J (Type u)).isIso_of_isIso_map α
 
 theorem isIso_sheafifyMap_iff_isIso_whiserking {X : C} (S : Sieve X) :
     IsIso (sheafifyMap J S.functorInclusion)
@@ -112,11 +95,8 @@ theorem sheaves_respect_iff_isIso_sheafifyMap {X : C} (S : Sieve X) :
     ext P
     rw [← Presieve.isSheafFor_iff_yonedaSheafCondition]
   apply Iff.intro
-  . intros h P
-    exact h P.cond
-  . intros h P hP
-    let F: Sheaf J (Type u) := { val := P, cond := hP }
-    exact h F
+  . intros h P; exact h P.cond
+  . intros h P hP; exact h { val := P, cond := hP }
 
 theorem isIso_sheafifyMap_functorInclusion_iff_covering {X : C} (S : Sieve X) :
     IsIso (sheafifyMap J S.functorInclusion) ↔ S ∈ J X := by

@@ -1,4 +1,3 @@
--- import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
 import ToposTheory.GrothendieckSubtopos
 import ToposTheory.Saturation
 import Mathlib.Order.Rel.GaloisConnection
@@ -61,38 +60,6 @@ lemma isIso_idRestrictionMap_of_isIso_restrictionMap {XS : (X : C) × Sieve X} {
   rw [← XS.snd.pullback_id]
   exact h (𝟙 _)
 
-theorem isIso_restrictionMap_iff_isSheafFor {X : C} (S : Sieve X) :
-    (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (S.pullback f).arrows) ↔ isIso_restrictionMap ⟨X, S⟩ P := by
-  conv =>
-    lhs
-    ext X' f
-    rw [Presieve.isSheafFor_iff_yonedaSheafCondition]
-    unfold Presieve.YonedaSheafCondition
-  conv =>
-    rhs
-    unfold isIso_restrictionMap
-    simp [restrictionMap, isIso_iff_bijective, Function.bijective_iff_existsUnique]
-
-theorem mem_leftFixedPoint (J : GrothendieckTopology C) :
-    {⟨X, S⟩ : (X : C) × Sieve X | S ∈ J.sieves X} ∈ (leftFixedPoints isIso_restrictionMap) := by
-  ext ⟨X, S⟩
-  simp [leftFixedPoints, leftDual, rightDual]
-  apply Iff.intro
-  . rw [← Presheaf.sheaves_respect_iff_covering]
-    intros h P hP
-    have: (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (S.pullback f).arrows) := by
-      rw [isIso_restrictionMap_iff_isSheafFor]
-      apply h
-      intros YS hYS
-      obtain ⟨Y, S'⟩ := YS
-      rw [← isIso_restrictionMap_iff_isSheafFor]
-      intros _ f
-      exact hP.isSheafFor (S'.pullback f) (J.pullback_stable f hYS)
-    have := this (𝟙 _)
-    rw [Sieve.pullback_id] at this
-    exact this
-  . tauto
-
 lemma isIso_restrictionMap_top (X : C) (P : Cᵒᵖ ⥤ Type u) : isIso_restrictionMap ⟨X, ⊤⟩ P := by
   unfold isIso_restrictionMap restrictionMap
   intros X' _
@@ -114,7 +81,7 @@ def descends {X : C} (S R : Sieve X) (P : C ᵒᵖ ⥤ Type u) : Prop :=
 
 variable {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
 
-lemma descends_of_pullback(hR : descends S R P) {Y : C} (f : Y ⟶ X) :
+lemma descends_of_pullback (hR : descends S R P) {Y : C} (f : Y ⟶ X) :
     descends (S.pullback f) (R.pullback f) P := by
   intros Z g hg
   rw [← Sieve.pullback_comp]
@@ -169,7 +136,7 @@ lemma isIso_restrictionMap_transitive {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ 
 
 end Transitivity
 
-instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
+instance instGrothendieckTopologyOfLeftFixedPoint {J : Set ((X : C) × Sieve X)}
     (h : J ∈ leftFixedPoints isIso_restrictionMap) : GrothendieckTopology C := by
   simp [leftFixedPoints, rightDual, leftDual] at h
   apply GrothendieckTopology.mk (fun X ↦ {S : Sieve X | ⟨X, S⟩ ∈ J})
@@ -180,20 +147,68 @@ instance instGrothendieckTopologyOfleftFixedPoint {J : Set ((X : C) × Sieve X)}
   . intros; rw [← h]; intros P _
     exact isIso_restrictionMap_transitive (by tauto) (by tauto)
 
+theorem isIso_restrictionMap_iff_isSheafFor {X : C} (S : Sieve X) :
+    (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (S.pullback f).arrows) ↔ isIso_restrictionMap ⟨X, S⟩ P := by
+  conv =>
+    lhs
+    ext X' f
+    rw [Presieve.isSheafFor_iff_yonedaSheafCondition]
+    unfold Presieve.YonedaSheafCondition
+  conv =>
+    rhs
+    unfold isIso_restrictionMap
+    simp [restrictionMap, isIso_iff_bijective, Function.bijective_iff_existsUnique]
+
+theorem mem_leftFixedPoint (J : GrothendieckTopology C) :
+    {⟨X, S⟩ : (X : C) × Sieve X | S ∈ J.sieves X} ∈ (leftFixedPoints isIso_restrictionMap) := by
+  ext ⟨X, S⟩
+  simp [leftFixedPoints, leftDual, rightDual]
+  apply Iff.intro
+  . rw [← Presheaf.sheaves_respect_iff_covering]
+    intros h P hP
+    have: (∀ {X' : C} (f : X' ⟶ X), Presieve.IsSheafFor P (S.pullback f).arrows) := by
+      rw [isIso_restrictionMap_iff_isSheafFor]
+      apply h
+      intros YS hYS
+      obtain ⟨Y, S'⟩ := YS
+      rw [← isIso_restrictionMap_iff_isSheafFor]
+      intros _ f
+      exact hP.isSheafFor (S'.pullback f) (J.pullback_stable f hYS)
+    rw [← S.pullback_id]
+    exact this (𝟙 _)
+  . tauto
+
+instance instLeftFixedPointsEquivGrothendieckTopologies :
+    leftFixedPoints (isIso_restrictionMap (C := C)) ≃ GrothendieckTopology C where
+  toFun := fun ⟨_, hJ⟩ ↦ instGrothendieckTopologyOfLeftFixedPoint hJ
+  invFun J := ⟨_, mem_leftFixedPoint J⟩
+  left_inv := by tauto
+  right_inv := by tauto
+
 open GrothendieckTopos
 
-variable {I : Set (Cᵒᵖ ⥤ Type u)}
-
-theorem mem_rightFixedPoint (ℰ : Subtopos (Cᵒᵖ ⥤ Type u)) (h : ∀ P, ℰ.obj P ↔ P ∈ I) :
-    I ∈ rightFixedPoints isIso_restrictionMap := sorry
-
-instance subtopos_of_rightFixedPoint (h : I ∈ rightFixedPoints isIso_restrictionMap) :
+instance instSubtoposOfRightFixedPoint {I : Set (Cᵒᵖ ⥤ Type u)} (h : I ∈ rightFixedPoints isIso_restrictionMap) :
     Subtopos (Cᵒᵖ ⥤ Type u) where
   obj P := P ∈ I
   adj := sorry
   flat := sorry
   mem := sorry
 
-instance : GrothendieckTopology C ≃ Subtopos (Cᵒᵖ ⥤ Type u) := sorry
+theorem mem_rightFixedPoint (ℰ : Subtopos (Cᵒᵖ ⥤ Type u)) :
+    {P : C ᵒᵖ ⥤ Type u | ℰ.obj P} ∈ rightFixedPoints isIso_restrictionMap := sorry
+
+instance instRightFixedPointsEquivSubtopoi :
+    rightFixedPoints (isIso_restrictionMap (C := C)) ≃ Subtopos (C ᵒᵖ ⥤ Type u) where
+  toFun := fun ⟨_, hI⟩ ↦ instSubtoposOfRightFixedPoint hI
+  invFun ℰ := ⟨_, mem_rightFixedPoint ℰ⟩
+  left_inv := by tauto
+  right_inv := by intro; ext; simp [instSubtoposOfRightFixedPoint]
+
+-- TODO(@doctorn) note that this proves an equivalence of types, not an equivalence of categories.
+-- We should aim to upgrade this theorem to show that the two categories are equivalent.
+instance: GrothendieckTopology C ≃ Subtopos (Cᵒᵖ ⥤ Type u) :=
+  Equiv.trans
+    (Equiv.symm instLeftFixedPointsEquivGrothendieckTopologies)
+    (Equiv.trans (equivFixedPoints (isIso_restrictionMap (C := C))) instRightFixedPointsEquivSubtopoi)
 
 end Subtopos

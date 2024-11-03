@@ -27,18 +27,20 @@ structure Subtopos where
 
 namespace Subtopos
 
-theorem ext {ℰ₁ ℰ₂ : Subtopos ℰ} (h : ℰ₁.obj = ℰ₂.obj) : ℰ₁ = ℰ₂ := by admit
+@[ext]
+theorem ext {ℰ₁ ℰ₂ : Subtopos ℰ} {h : ℰ₁.obj = ℰ₂.obj} : ℰ₁ = ℰ₂ := by
+  sorry
 
-instance : LE (Subtopos ℰ) where
+instance: LE (Subtopos ℰ) where
   le ℰ₁ ℰ₂ := ℰ₁.obj ≤ ℰ₂.obj
 
 theorem le_def {ℰ₁ ℰ₂ : Subtopos ℰ} : ℰ₁ ≤ ℰ₂ ↔ ℰ₁.obj ≤ ℰ₂.obj := Iff.refl _
 
-instance : PartialOrder (Subtopos ℰ) where
+instance: PartialOrder (Subtopos ℰ) where
   __ := instLE ℰ
   le_refl := fun ℰ₁ => (le_def ℰ).mpr le_rfl
   le_trans := fun ℰ₁ ℰ₂ ℰ₃ h₁₂ h₂₃ => (le_def ℰ).mpr (le_trans h₁₂ h₂₃)
-  le_antisymm := fun ℰ₁ ℰ₂ h₁₂ h₂₁ => ext ℰ (le_antisymm h₁₂ h₂₁)
+  le_antisymm := by aesop
 
 end Subtopos
 
