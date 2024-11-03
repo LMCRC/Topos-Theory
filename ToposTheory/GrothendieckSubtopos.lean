@@ -21,9 +21,11 @@ open Functor Limits Adjunction
 
 structure Subtopos where
   obj : ℰ → Prop
-  adj : IsRightAdjoint (fullSubcategoryInclusion obj)
-  flat : PreservesFiniteLimits (fullSubcategoryInclusion obj).leftAdjoint
-  mem : ∀ (E : ℰ), obj E ↔ IsIso ((ofIsRightAdjoint (fullSubcategoryInclusion obj)).unit.app E)
+  -- FIXME(@doctorn) I added this as structure because it made the proofs go through, but I'm realising now it falsifies the ext theorem
+  L : ℰ ⥤ FullSubcategory obj
+  adj : L ⊣ fullSubcategoryInclusion obj
+  flat : PreservesFiniteLimits L
+  mem : ∀ (E : ℰ), obj E ↔ IsIso (adj.unit.app E)
 
 namespace Subtopos
 
