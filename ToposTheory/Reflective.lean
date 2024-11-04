@@ -13,11 +13,13 @@ variable (i : C ⥤ D)
 variable [Reflective i]
 
 def adjunctOfReflection {X Y : D} (f : X ⟶ Y) : i ⋙ (coyoneda.obj (op Y)) ⟶ i ⋙ (coyoneda.obj (op X)) where
-  app := by
-    intro Z
+  app Z := by
     simp [coyoneda]
     let α := (reflectorAdjunction i).homEquiv
     exact (α X Z).toFun ∘ (coyoneda.map ((reflector i).map f).op).app Z ∘ (α Y Z).invFun
+  naturality Z W g := by
+    simp [coyoneda]
+    sorry
 
 theorem isIso_reflector_iff_isIso_coyoneda_reflector {X Y : D} (f : X ⟶ Y) :
     IsIso ((reflector i).map f) ↔ IsIso (coyoneda.map ((reflector i).map f).op) := by
@@ -31,7 +33,7 @@ theorem isIso_reflector_iff_isIso_coyoneda_reflector {X Y : D} (f : X ⟶ Y) :
 theorem yonedaMap_eq_adjunctOfReflection (i : C ⥤ D) [Reflective i] {X Y : D} (f : X ⟶ Y) :
     whiskerLeft i (coyoneda.map f.op) = adjunctOfReflection i f := by
   unfold adjunctOfReflection
-  aesop_cat
+  sorry
 
 theorem isIso_iff_isIso_adjunctOfReflection {X Y : D} (f : X ⟶ Y) :
     IsIso ((reflector i).map f) ↔ IsIso (adjunctOfReflection i f) := by

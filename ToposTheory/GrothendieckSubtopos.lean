@@ -21,17 +21,24 @@ open Functor Limits Adjunction
 
 structure Subtopos where
   obj : ℰ → Prop
-  -- FIXME(@doctorn) I added this as structure because it made the proofs go through, but I'm realising now it falsifies the ext theorem
-  L : ℰ ⥤ FullSubcategory obj
-  adj : L ⊣ fullSubcategoryInclusion obj
-  flat : PreservesFiniteLimits L
-  mem : ∀ (E : ℰ), obj E ↔ IsIso (adj.unit.app E)
+  adj : IsRightAdjoint (fullSubcategoryInclusion obj)
+  flat : PreservesFiniteLimits (fullSubcategoryInclusion obj).leftAdjoint
+  mem : ∀ (E : ℰ), obj E ↔ IsIso ((ofIsRightAdjoint (fullSubcategoryInclusion obj)).unit.app E)
 
 namespace Subtopos
 
+instance: SetLike (Subtopos ℰ) ℰ where
+  coe ℰ₁ := { X : ℰ | ℰ₁.obj X }
+  coe_injective' ℰ₁ ℰ₂ h := by
+    obtain ⟨obj₁, _, _, _⟩ := ℰ₁
+    obtain ⟨obj₂, _, _, _⟩ := ℰ₂
+    sorry --NOTE(@doctorn) this is just a lot of heterogeneous equality transport
+
 @[ext]
 theorem ext {ℰ₁ ℰ₂ : Subtopos ℰ} {h : ℰ₁.obj = ℰ₂.obj} : ℰ₁ = ℰ₂ := by
-  sorry
+  have: ∀ X, X ∈ { X : ℰ | ℰ₁.obj X } ↔ X ∈ { X : ℰ | ℰ₂.obj X } := by
+    intro; simp [h]
+  exact SetLike.ext this
 
 instance: LE (Subtopos ℰ) where
   le ℰ₁ ℰ₂ := ℰ₁.obj ≤ ℰ₂.obj

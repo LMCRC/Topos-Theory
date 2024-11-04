@@ -126,7 +126,7 @@ theorem isIso_idRestrictionMap_transitive {X : C} {S R : Sieve X} {P : C ᵒᵖ 
         _ = q.app Y g
           := by simp [curriedYonedaLemma', yonedaEquiv]
     rw [← Category.assoc, this, IsIso.hom_inv_id]
-  . sorry -- NOTE(@doctorn) this is the final sentence of slide 26 in Lafforgue's presentation
+  . sorry -- TODO(@doctorn) this is the final sentence of slide 26 in Lafforgue's presentation
 
 lemma isIso_restrictionMap_transitive {X : C} {S R : Sieve X} {P : C ᵒᵖ ⥤ Type u}
     (hS : isIso_restrictionMap ⟨X, S⟩ P) (hR : descends S R P) : isIso_restrictionMap ⟨X, R⟩ P := by
@@ -193,54 +193,80 @@ def inducedTopology (I : Set (Cᵒᵖ ⥤ Type u)) : GrothendieckTopology C :=
 theorem isSheafFor_inducedTopology_iff (I : Set (Cᵒᵖ ⥤ Type u)) (h : I ∈ rightFixedPoints isIso_restrictionMap) (P : C ᵒᵖ ⥤ Type u) :
     P ∈ I ↔ Presheaf.IsSheaf (inducedTopology J) P := sorry
 
-instance sheavesEquivFullSubcategory {I : Set (Cᵒᵖ ⥤ Type u)} (h : I ∈ rightFixedPoints isIso_restrictionMap) :
-    Sheaf (inducedTopology I) (Type u) ≌ FullSubcategory (fun P ↦ P ∈ I) where
-  functor := {
-    obj := fun P ↦ ⟨P.val, (isSheafFor_inducedTopology_iff I h P.val).mpr P.cond⟩
-    map := fun α ↦ α.val
-  }
-  inverse := {
-    obj := fun P ↦ { val := P.1, cond := (isSheafFor_inducedTopology_iff I h P.1).mp P.2 }
-    map := fun α ↦ { val := α }
-  }
+instance sheavesEquivFullSubcategory (J : GrothendieckTopology C) :
+    Sheaf J (Type u) ≌ FullSubcategory (C := C ᵒᵖ ⥤ Type u) (Presheaf.IsSheaf J) where
+  functor := { obj := fun P ↦ ⟨P.val, P.cond⟩, map := fun α ↦ α.val }
+  inverse := { obj := fun P ↦ { val := P.1, cond := P.2 }, map := fun α ↦ { val := α } }
   unitIso := by tauto
   counitIso := by tauto
 
-lemma sheavesEquivFullSubcategory_forget_eq_fullSubcategoryInclusion {I : Set (Cᵒᵖ ⥤ Type u)} (h : I ∈ rightFixedPoints isIso_restrictionMap) :
-    (sheavesEquivFullSubcategory h).inverse ⋙ sheafToPresheaf (inducedTopology I) (Type u) = fullSubcategoryInclusion (fun P ↦ P ∈ I) := by
+lemma sheavesEquivFullSubcategory_forget_eq_fullSubcategoryInclusion (J : GrothendieckTopology C) :
+    (sheavesEquivFullSubcategory J).inverse ⋙ sheafToPresheaf J (Type u) = fullSubcategoryInclusion (C := C ᵒᵖ ⥤ Type u) (Presheaf.IsSheaf J) := by
   aesop
 
-noncomputable instance instSubtoposOfRightFixedPoint {I : Set (Cᵒᵖ ⥤ Type u)} (h : I ∈ rightFixedPoints isIso_restrictionMap) : Subtopos (Cᵒᵖ ⥤ Type u) where
-  obj P := P ∈ I
-  L := presheafToSheaf (inducedTopology I) (Type u) ⋙ (sheavesEquivFullSubcategory h).functor
-  adj := by
-    rw [← sheavesEquivFullSubcategory_forget_eq_fullSubcategoryInclusion]
-    exact (Adjunction.comp (sheafificationAdjunction (inducedTopology I) (Type u)) (sheavesEquivFullSubcategory h).toAdjunction)
-  flat := compPreservesFiniteLimits (presheafToSheaf (inducedTopology I) (Type u)) (sheavesEquivFullSubcategory h).functor
-  mem := by
-    intro P
-    simp [sheavesEquivFullSubcategory]
-    rw [isSheafFor_inducedTopology_iff I h]
+instance isRightAdjoint_fullInclusion (J : GrothendieckTopology C) :
+    Functor.IsRightAdjoint (fullSubcategoryInclusion (C := C ᵒᵖ ⥤ Type u) (Presheaf.IsSheaf J)) := by
+  rw [← sheavesEquivFullSubcategory_forget_eq_fullSubcategoryInclusion J]
+  exact Functor.isRightAdjoint_comp
+
+@[simp]
+noncomputable instance instSheavesSubtopos (J : GrothendieckTopology C) : Subtopos (Cᵒᵖ ⥤ Type u) where
+  obj P := Presheaf.IsSheaf J P
+  adj := isRightAdjoint_fullInclusion J
+  flat := by
+    conv =>
+      congr; congr
+      rw [← sheavesEquivFullSubcategory_forget_eq_fullSubcategoryInclusion J]
+    have: PreservesFiniteLimits (presheafToSheaf _ _ ⋙ (sheavesEquivFullSubcategory J).functor) := by apply compPreservesFiniteLimits
+    have :=
+      Adjunction.leftAdjointUniq
+        (Adjunction.comp (sheafificationAdjunction _ _) (sheavesEquivFullSubcategory J).toAdjunction)
+        (Adjunction.ofIsRightAdjoint _)
+    apply preservesFiniteLimitsOfNatIso this
+  mem P := by
+    have :=
+      Adjunction.unit_leftAdjointUniq_hom_app
+        (Adjunction.comp (sheafificationAdjunction _ _) (sheavesEquivFullSubcategory J).toAdjunction)
+        (Adjunction.ofIsRightAdjoint (fullSubcategoryInclusion (Presheaf.IsSheaf J))) P
+    rw [← this]
+    have: ((sheafificationAdjunction J _).comp (sheavesEquivFullSubcategory J).toAdjunction).unit.app P = toSheafify J P := by aesop
+    rw [this]
+    -- NOTE(@doctorn) unfortunately, I wasn't able to get this to simplify to anything useful, so
+    -- it has to live explicitly in the code. However, Lean is perfectly able to see that it's an isomorphism
+    -- without any help, so the overall effect is not too egregious.
+    let rightFactor :=
+      ((sheavesEquivFullSubcategory _).inverse ⋙ sheafToPresheaf _ _).map
+        ((((sheafificationAdjunction _ _).comp (sheavesEquivFullSubcategory J).toAdjunction).leftAdjointUniq
+          (Adjunction.ofIsRightAdjoint (fullSubcategoryInclusion _))).hom.app P)
+    have: IsIso rightFactor := by infer_instance
     apply Iff.intro
-    . exact isIso_toSheafify (inducedTopology I)
-    . -- NOTE(@doctorn) I think this could be cleaned up using the reflective sub-category machinery
+    . intro hP
+      have := isIso_toSheafify J hP
+      apply IsIso.comp_isIso
+    . -- NOTE(@doctorn) I also feel like this part could be significantly cleaned up using the reflective subcategory
+      -- machinery.
       intro hP
-      have cond: Presieve.IsSheaf (inducedTopology I) (sheafify (inducedTopology I) P) := by
+      have cond: Presieve.IsSheaf J (sheafify J P) := by
         rw [← isSheaf_iff_isSheaf_of_type]
         unfold sheafify
-        exact ((presheafToSheaf (inducedTopology I) (Type u)).obj P).cond
-      rw [isSheaf_iff_isSheaf_of_type]
-      exact Presieve.isSheaf_iso (inducedTopology I) (asIso (toSheafify (inducedTopology I) P)).symm cond
+        exact ((presheafToSheaf J _).obj P).cond
+      simp [isSheaf_iff_isSheaf_of_type]
+      have := IsIso.of_isIso_fac_right (h := toSheafify J P ≫ rightFactor) (by rfl)
+      exact Presieve.isSheaf_iso J (asIso (toSheafify J P)).symm cond
+
+@[simp]
+noncomputable instance instSubtoposOfSet (I : Set (Cᵒᵖ ⥤ Type u)) : Subtopos (Cᵒᵖ ⥤ Type u) :=
+  instSheavesSubtopos (inducedTopology I)
 
 theorem mem_rightFixedPoint (ℰ : Subtopos (Cᵒᵖ ⥤ Type u)) :
     {P : C ᵒᵖ ⥤ Type u | ℰ.obj P} ∈ rightFixedPoints isIso_restrictionMap := sorry
 
 noncomputable instance instRightFixedPointsEquivSubtopoi :
     rightFixedPoints (isIso_restrictionMap (C := C)) ≃ Subtopos (C ᵒᵖ ⥤ Type u) where
-  toFun := fun ⟨_, hI⟩ ↦ instSubtoposOfRightFixedPoint hI
+  toFun := fun ⟨I, hI⟩ ↦ instSubtoposOfSet I
   invFun ℰ := ⟨_, mem_rightFixedPoint ℰ⟩
-  left_inv := by tauto
-  right_inv := by intro; ext; simp [instSubtoposOfRightFixedPoint]
+  left_inv I := by ext; simp [← isSheafFor_inducedTopology_iff I.1 I.2]
+  right_inv ℰ₁ := by ext; simp [← isSheafFor_inducedTopology_iff {P | ℰ₁.obj P} (mem_rightFixedPoint ℰ₁)]
 
 -- TODO(@doctorn) note that this proves an equivalence of types, not an equivalence of categories.
 -- We should aim to upgrade this theorem to show that the two categories are equivalent.
