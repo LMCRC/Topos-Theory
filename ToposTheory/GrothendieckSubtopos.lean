@@ -32,7 +32,7 @@ instance: SetLike (Subtopos ℰ) ℰ where
   coe_injective' ℰ₁ ℰ₂ h := by
     obtain ⟨obj₁, _, _, _⟩ := ℰ₁
     obtain ⟨obj₂, _, _, _⟩ := ℰ₂
-    sorry --NOTE(@doctorn) this is just a lot of heterogeneous equality transport
+    sorry -- TODO(@doctorn) this is just a lot of heterogeneous equality transport
 
 @[ext]
 theorem ext {ℰ₁ ℰ₂ : Subtopos ℰ} {h : ℰ₁.obj = ℰ₂.obj} : ℰ₁ = ℰ₂ := by

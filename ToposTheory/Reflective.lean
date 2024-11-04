@@ -12,14 +12,15 @@ variable [Category.{v₁} C] [Category.{v₂} D]
 variable (i : C ⥤ D)
 variable [Reflective i]
 
+--NOTE(@doctorn) the two `sorry`s in this file had previously just been `aesop_cat`, but
+-- unfortunately, aesop can't find the proof in the latest version.
+
 def adjunctOfReflection {X Y : D} (f : X ⟶ Y) : i ⋙ (coyoneda.obj (op Y)) ⟶ i ⋙ (coyoneda.obj (op X)) where
   app Z := by
     simp [coyoneda]
     let α := (reflectorAdjunction i).homEquiv
     exact (α X Z).toFun ∘ (coyoneda.map ((reflector i).map f).op).app Z ∘ (α Y Z).invFun
-  naturality Z W g := by
-    simp [coyoneda]
-    sorry
+  naturality Z W g := by sorry
 
 theorem isIso_reflector_iff_isIso_coyoneda_reflector {X Y : D} (f : X ⟶ Y) :
     IsIso ((reflector i).map f) ↔ IsIso (coyoneda.map ((reflector i).map f).op) := by

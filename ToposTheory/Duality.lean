@@ -191,7 +191,19 @@ def inducedTopology (I : Set (Cᵒᵖ ⥤ Type u)) : GrothendieckTopology C :=
   instGrothendieckTopologyOfLeftFixedPoint (rightDual_mem_leftFixedPoint isIso_restrictionMap I)
 
 theorem isSheafFor_inducedTopology_iff (I : Set (Cᵒᵖ ⥤ Type u)) (h : I ∈ rightFixedPoints isIso_restrictionMap) (P : C ᵒᵖ ⥤ Type u) :
-    P ∈ I ↔ Presheaf.IsSheaf (inducedTopology J) P := sorry
+    P ∈ I ↔ Presheaf.IsSheaf (inducedTopology I) P := by
+  simp [rightFixedPoints, leftDual, rightDual] at h
+  conv => lhs; rw [← h]; simp
+  conv => rhs; simp [isSheaf_iff_isSheaf_of_type, Presieve.IsSheaf]
+  apply Iff.intro
+  . intros hP
+    intros X S hS
+    have := (isSheafFor_iff_isIso_restrictionMap S).mpr (hP hS) (𝟙 _)
+    simpa [Sieve.pullback_id]
+  . intros hP XS hI
+    rw [← isSheafFor_iff_isIso_restrictionMap XS.2]
+    intros _ f
+    exact hP (XS.2.pullback f) ((inducedTopology I).pullback_stable f (by aesop))
 
 instance sheavesEquivFullSubcategory (J : GrothendieckTopology C) :
     Sheaf J (Type u) ≌ FullSubcategory (C := C ᵒᵖ ⥤ Type u) (Presheaf.IsSheaf J) where
@@ -209,6 +221,7 @@ instance isRightAdjoint_fullInclusion (J : GrothendieckTopology C) :
   rw [← sheavesEquivFullSubcategory_forget_eq_fullSubcategoryInclusion J]
   exact Functor.isRightAdjoint_comp
 
+--TODO(@doctorn) this probably belongs in the subtopos file
 @[simp]
 noncomputable instance instSheavesSubtopos (J : GrothendieckTopology C) : Subtopos (Cᵒᵖ ⥤ Type u) where
   obj P := Presheaf.IsSheaf J P

@@ -48,7 +48,7 @@ lemma imageSieve_identityElement_ge {X : C} (S : Sieve X) :
   have ht: ((sheafifyMap J S.functorInclusion).app (op Y)) t = (toSheafify J (yoneda.obj X)).app (op Y) f := by
     rw [← sheafify_identityElement_naturality]
     exact ht
-  -- Looking at this goal, I'm less and less sure it's possible to fill. It's possible that I'm
+  -- TODO(@doctorn) Looking at this goal, I'm less and less sure it's possible to fill. It's possible that I'm
   -- trying to prove something that's false here...
   sorry
 
