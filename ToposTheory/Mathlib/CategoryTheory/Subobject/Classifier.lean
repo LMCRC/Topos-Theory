@@ -4,13 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Pablo Donato
 -/
 
-import Mathlib.CategoryTheory.Category.Basic
 import Mathlib.CategoryTheory.Subobject.Basic
-import Mathlib.CategoryTheory.Limits.Shapes.FiniteLimits
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.CommSq
-import Mathlib.CategoryTheory.Functor.Basic
-import Mathlib.CategoryTheory.Yoneda
-import Mathlib.CategoryTheory.Opposites
 
 /-!
 # Subobject classifiers
@@ -70,27 +65,25 @@ section Sub
 
 variable {C : Type u} [Category.{v} C] [Limits.HasPullbacks C]
 
-lemma Subobject_op_eq (X : Cᵒᵖ) : Subobject (Opposite.unop X) = Subobject X := by {
-  sorry
-}
-
 noncomputable instance Sub : Cᵒᵖ ⥤ Type (max u v) where
-  obj := Subobject
+  obj X := (@Subobject C _ X.unop)
 
-  map := by {
-    intro X Y f
-    have F := pullback f.unop
-    simp only [← Subobject_op_eq]
-    intro m
-    exact (F.obj m)
-  }
+  map f := (pullback f.unop).obj
 
   map_id := by {
-    sorry
+    simp only
+    intro X
+    funext
+    rw [unop_id, pullback_id]
+    simp
   }
 
   map_comp := by {
-    sorry
+    simp only
+    intro X Y Z f g
+    funext
+    rw [unop_comp, pullback_comp]
+    simp
   }
 
 end Sub
