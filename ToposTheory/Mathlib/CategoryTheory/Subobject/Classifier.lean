@@ -75,11 +75,6 @@ instance : Mono 𝒞.true! := true!_mono
 /-- `truth` is the subobject associated to the subobject classifier `true!`. -/
 noncomputable def truth : Subobject 𝒞.Ω := Subobject.mk true!
 
--- noncomputable def underlying_truth : (underlying.obj truth) ≅ ⊤_ C :=
---   underlyingIso true!
-
--- def truth_true! : truth.arrow = true! := sorry
-
 /-- `S.cmap` is the unique characteristic map of subobject `S` given by the subobject classifier. -/
 def cmap {X : C} (S : Subobject X) : X ⟶ Ω :=
   (is_classifier S).default.val
@@ -150,9 +145,11 @@ lemma cmap_compr_self [Classifier C] {X : C} (χ : X ⟶ Ω) :
     have : S = Subobject.mk (pullback.snd true! χ) := by
       have eqp := pullback_subobject χ truth
       simp only [S, compr, ← eqp]
+      apply mk_eq_mk_of_comm
+      · sorry
+      · sorry
       -- have : truth.arrow = true! := by aesop
     -- have : terminal.from ((pullback χ).obj truth : C) = pullback.fst true! χ := by
-      sorry
     rw [this]
     -- rw [Subobject.mk_arrow (pullback.snd true! χ)]
     sorry
