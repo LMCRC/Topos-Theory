@@ -8,6 +8,10 @@ import Mathlib.CategoryTheory.Subobject.Basic
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.CommSq
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
 
+-- import Mathlib.Tactic.Widget.CommDiag
+-- import ProofWidgets.Component.Panel.GoalTypePanel
+-- import ProofWidgets.Component.Panel.SelectionPanel
+
 /-!
 # Subobject classifiers
 
@@ -36,6 +40,8 @@ open CategoryTheory
 open Limits
 open Subobject
 
+-- open ProofWidgets
+
 universe u v
 
 /-! ### The notion of subobject classifier -/
@@ -63,7 +69,7 @@ class Classifier where
 
 /-- A category `C` has a subobject classifier if there exists a monomorphism `truth : ⊤_ C ⟶ Ω` that
     is a subobject classifier. -/
-class HasClassifier : Prop :=
+class HasClassifier : Prop where
   has_classifier : Nonempty (Classifier C)
 
 open Classifier
@@ -74,6 +80,9 @@ instance : Mono 𝒞.true! := true!_mono
 
 /-- `truth` is the subobject associated to the subobject classifier `true!`. -/
 noncomputable def truth : Subobject 𝒞.Ω := Subobject.mk true!
+
+lemma true_truth_arrow : (underlyingIso 𝒞.true!).hom ≫ 𝒞.true! = truth.arrow := by
+  simp [truth]
 
 /-- `S.cmap` is the unique characteristic map of subobject `S` given by the subobject classifier. -/
 def cmap {X : C} (S : Subobject X) : X ⟶ Ω :=
@@ -129,11 +138,27 @@ lemma pullback_subobject {X Y : C} (f : Y ⟶ X) (S : Subobject X) :
   · sorry
   · sorry
 
--- lemma arrow_mk {X Y : C} (f : Y ⟶ X) [Mono f] :
---     (Subobject.mk f).arrow = f := by
---   sorry
+noncomputable def pullback_ext_iso_1 {X X' Y Z : C} (f : X ⟶ Y) (f' : X' ⟶ Y) (g : Z ⟶ Y)
+    (i : X ≅ X') (w : i.hom ≫ f' = f) :
+    Limits.pullback f g ≅ Limits.pullback f' g := {
+  hom := by
+    refine pullback.lift (pullback.fst f g ≫ i.hom) (pullback.snd f g) ?_
+    rw [Category.assoc, w]
+    exact pullback.condition
+  inv := by
+    refine pullback.lift (pullback.fst f' g ≫ i.inv) (pullback.snd f' g) ?_
+    conv =>
+      lhs
+      rw [Category.assoc, ← w]
+      rhs
+      rw [← Category.assoc, i.inv_hom_id, Category.id_comp]
+    exact pullback.condition
+  hom_inv_id := by
+    aesop_cat
+  inv_hom_id := by
+    aesop_cat
+}
 
--- lemma pullback_subobject_arrow {X Y : C} (f : Y ⟶ X) (S : Subobject X) :
 
 lemma cmap_compr_self [Classifier C] {X : C} (χ : X ⟶ Ω) :
     (compr χ).cmap = χ := by
@@ -145,13 +170,10 @@ lemma cmap_compr_self [Classifier C] {X : C} (χ : X ⟶ Ω) :
     have : S = Subobject.mk (pullback.snd true! χ) := by
       have eqp := pullback_subobject χ truth
       simp only [S, compr, ← eqp]
-      apply mk_eq_mk_of_comm
-      · sorry
-      · sorry
-      -- have : truth.arrow = true! := by aesop
+      let i := pullback_ext_iso_1 _ _ χ (underlyingIso true!) true_truth_arrow
+      apply mk_eq_mk_of_comm (pullback.snd truth.arrow χ) (pullback.snd true! χ) i
+      simp [i, pullback_ext_iso_1]
     -- have : terminal.from ((pullback χ).obj truth : C) = pullback.fst true! χ := by
-    rw [this]
-    -- rw [Subobject.mk_arrow (pullback.snd true! χ)]
     sorry
   have hS : IsPullback (terminal.from (S : C)) S.arrow true! S.cmap :=
     sorry
