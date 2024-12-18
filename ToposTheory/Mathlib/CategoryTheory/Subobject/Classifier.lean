@@ -44,6 +44,8 @@ open Subobject
 
 universe u v
 
+variable {C : Type u} [Category.{v} C]
+
 /-! ### The notion of subobject classifier -/
 
 section SubobjectClassifier
@@ -100,7 +102,7 @@ end SubobjectClassifier
 
 section SubPresheaf
 
-variable {C : Type u} [Category.{v} C] [HasPullbacks C]
+variable [HasPullbacks C]
 
 noncomputable instance Sub : Cᵒᵖ ⥤ Type (max u v) where
   obj X := (@Subobject C _ X.unop)
@@ -123,22 +125,13 @@ noncomputable instance Sub : Cᵒᵖ ⥤ Type (max u v) where
 
 end SubPresheaf
 
-/-! ### A category has a subobject classifier if and only if `Sub` is representable -/
+section HelperLemmas
 
-namespace Classifier
+/-! ### Additional lemmas about pullbacks and subobjects -/
 
-open CategoryTheory.Yoneda
-open Opposite
+variable [HasPullbacks C]
 
-variable {C : Type u} [Category.{v} C] [HasPullbacks C] [HasTerminal C]
-
-lemma pullback_subobject {X Y : C} (f : Y ⟶ X) (S : Subobject X) :
-    Subobject.mk (pullback.snd S.arrow f) = (pullback f).obj S := by
-  apply mk_eq_of_comm
-  · sorry
-  · sorry
-
-noncomputable def pullback_ext_iso_1 {X X' Y Z : C} (f : X ⟶ Y) (f' : X' ⟶ Y) (g : Z ⟶ Y)
+noncomputable def pullback_congr_left_iso {X X' Y Z : C} (f : X ⟶ Y) (f' : X' ⟶ Y) (g : Z ⟶ Y)
     (i : X ≅ X') (w : i.hom ≫ f' = f) :
     Limits.pullback f g ≅ Limits.pullback f' g := {
   hom := by
@@ -159,6 +152,34 @@ noncomputable def pullback_ext_iso_1 {X X' Y Z : C} (f : X ⟶ Y) (f' : X' ⟶ Y
     aesop_cat
 }
 
+noncomputable def pullback_obj_iso {X Y : C} (f : Y ⟶ X) (S : Subobject X) :
+    ((pullback f).obj S : C) ≅ Limits.pullback S.arrow f := {
+  hom := by
+    refine pullback.lift ?_ ((pullback f).obj S).arrow ?_
+    sorry
+    sorry
+  inv := by
+    sorry
+  hom_inv_id := by
+    sorry
+  inv_hom_id := by
+    sorry
+}
+
+lemma pullback_obj_snd {X Y : C} (f : Y ⟶ X) (S : Subobject X) :
+    (pullback f).obj S = Subobject.mk (pullback.snd S.arrow f) :=
+  eq_mk_of_comm (pullback.snd S.arrow f) (pullback_obj_iso f S) (by simp [pullback_obj_iso])
+
+end HelperLemmas
+
+/-! ### A category has a subobject classifier if and only if `Sub` is representable -/
+
+namespace Classifier
+
+open CategoryTheory.Yoneda
+open Opposite
+
+variable [HasPullbacks C] [HasTerminal C]
 
 lemma cmap_compr_self [Classifier C] {X : C} (χ : X ⟶ Ω) :
     (compr χ).cmap = χ := by
@@ -166,13 +187,12 @@ lemma cmap_compr_self [Classifier C] {X : C} (χ : X ⟶ Ω) :
   obtain h := (is_classifier S).uniq
   have hχ : IsPullback (terminal.from (S : C)) S.arrow true! χ := by
     have h' := IsPullback.of_hasPullback true! χ
-    -- First we use the universal property of terminal objects
     have : S = Subobject.mk (pullback.snd true! χ) := by
-      have eqp := pullback_subobject χ truth
-      simp only [S, compr, ← eqp]
-      let i := pullback_ext_iso_1 _ _ χ (underlyingIso true!) true_truth_arrow
+      have eqp := pullback_obj_snd χ truth
+      simp only [S, compr, eqp]
+      let i := pullback_congr_left_iso _ _ χ (underlyingIso true!) true_truth_arrow
       apply mk_eq_mk_of_comm (pullback.snd truth.arrow χ) (pullback.snd true! χ) i
-      simp [i, pullback_ext_iso_1]
+      simp [i, pullback_congr_left_iso]
     -- have : terminal.from ((pullback χ).obj truth : C) = pullback.fst true! χ := by
     sorry
   have hS : IsPullback (terminal.from (S : C)) S.arrow true! S.cmap :=
